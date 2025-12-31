@@ -1,0 +1,6 @@
+# Wrangler's equivalent of .env.local — used by `wrangler dev` / `npm run cf:preview`.
+# Copy this file to `.dev.vars` and fill in your real values. `.dev.vars` is
+# gitignored; `next dev` still reads `.env.local` instead, so keep both in sync.
+
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-or-publishable-key
