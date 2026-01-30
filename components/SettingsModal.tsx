@@ -1,20 +1,26 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useUIStore } from "@/lib/store/useUIStore";
 import { useCurrentProfile } from "@/lib/supabase/useAuth";
 import { updateProfile, signOut } from "@/lib/supabase/actions";
 import { CloseIcon } from "@/components/icons";
+
+const USERNAME_PATTERN = /^[a-z0-9_.]{3,20}$/;
 
 export default function SettingsModal() {
   const open = useUIStore((s) => s.settingsOpen);
   const close = useUIStore((s) => s.closeSettings);
   const showToast = useUIStore((s) => s.showToast);
   const { profile, userId, mutate } = useCurrentProfile();
+  const router = useRouter();
 
   const [displayName, setDisplayName] = useState("");
+  const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
   const [saving, setSaving] = useState(false);
+  const [usernameError, setUsernameError] = useState<string | null>(null);
   const [notifLikes, setNotifLikes] = useState(true);
   const [notifComments, setNotifComments] = useState(true);
   const [notifFollows, setNotifFollows] = useState(true);
@@ -23,6 +29,7 @@ export default function SettingsModal() {
   useEffect(() => {
     if (profile) {
       setDisplayName(profile.display_name);
+      setUsername(profile.username);
       setBio(profile.bio);
     }
   }, [profile]);
@@ -30,15 +37,31 @@ export default function SettingsModal() {
   if (!open || !profile || !userId) return null;
 
   async function save() {
+    const cleanUsername = username.trim().toLowerCase();
+    if (!USERNAME_PATTERN.test(cleanUsername)) {
+      setUsernameError("3-20 characters: lowercase letters, numbers, underscore, or period");
+      setTab("profile");
+      return;
+    }
+    setUsernameError(null);
     setSaving(true);
+    const usernameChanged = cleanUsername !== profile!.username;
     try {
-      await updateProfile(userId!, { display_name: displayName, bio });
+      await updateProfile(userId!, { display_name: displayName, bio, username: cleanUsername });
       mutate();
       showToast("Settings saved");
       close();
-    } catch (err) {
+      if (usernameChanged) {
+        router.push(`/profile/${cleanUsername}`);
+      }
+    } catch (err: any) {
       console.error(err);
-      showToast("Couldn't save — try again");
+      if (err?.code === "23505") {
+        setUsernameError("That username is already taken");
+        setTab("profile");
+      } else {
+        showToast("Couldn't save — try again");
+      }
     } finally {
       setSaving(false);
     }
@@ -74,6 +97,22 @@ export default function SettingsModal() {
         <div className="px-5 py-5">
           {tab === "profile" && (
             <div className="flex flex-col gap-4">
+              <label className="flex flex-col gap-1.5">
+                <span className="text-xs text-muted font-mono">Username</span>
+                <div className="flex items-center gap-1.5 bg-surface2 border border-line rounded-lg px-3 py-2.5 focus-within:border-muted">
+                  <span className="text-muted">@</span>
+                  <input
+                    value={username}
+                    onChange={(e) => {
+                      setUsername(e.target.value.toLowerCase());
+                      setUsernameError(null);
+                    }}
+                    className="bg-transparent outline-none flex-1 min-w-0"
+                    maxLength={20}
+                  />
+                </div>
+                {usernameError && <span className="text-danger text-xs">{usernameError}</span>}
+              </label>
               <label className="flex flex-col gap-1.5">
                 <span className="text-xs text-muted font-mono">Display name</span>
                 <input

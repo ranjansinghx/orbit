@@ -1,15 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
 import { useCurrentProfile } from "@/lib/supabase/useAuth";
 import { useProfileByUsername, useUserPosts, useFollowCounts } from "@/lib/supabase/hooks";
 import { useUIStore } from "@/lib/store/useUIStore";
 import { startConversation } from "@/lib/supabase/actions";
 import Avatar from "@/components/Avatar";
 import FollowButton from "@/components/FollowButton";
-import TextPostCard from "@/components/feed/TextPostCard";
+import ProfilePostRow from "@/components/feed/ProfilePostRow";
 import { GearIcon } from "@/components/icons";
 import { compactNumber } from "@/lib/format";
 
@@ -22,16 +21,18 @@ export default function ProfilePage() {
   const { counts } = useFollowCounts(user?.id);
   const openSettings = useUIStore((s) => s.openSettings);
 
-  const [tab, setTab] = useState<"media" | "text">("media");
   const [messaging, setMessaging] = useState(false);
+
+  const sortedPosts = useMemo(
+    () => [...userPosts].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+    [userPosts]
+  );
 
   if (!user) {
     return <div className="max-w-2xl mx-auto px-5 py-10 text-muted">Loading profile...</div>;
   }
 
   const isMe = user.id === currentUserId;
-  const mediaPosts = userPosts.filter((p) => p.type !== "text");
-  const textPosts = userPosts.filter((p) => p.type === "text");
 
   async function handleMessage() {
     if (!user) return;
@@ -42,6 +43,13 @@ export default function ProfilePage() {
     } finally {
       setMessaging(false);
     }
+  }
+
+  function patchPost(id: string, patch: any) {
+    mutatePosts(
+      (current: any) => current?.map((p: any) => (p.id === id ? { ...p, ...patch } : p)),
+      { revalidate: false }
+    );
   }
 
   return (
@@ -90,43 +98,10 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className="flex border-b border-line sticky top-0 bg-ink/90 backdrop-blur-sm z-10">
-        {(["media", "text"] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`flex-1 py-3.5 text-sm font-medium border-b-2 transition-colors ${
-              tab === t ? "border-paper text-paper" : "border-transparent text-muted"
-            }`}
-          >
-            {t === "media" ? `For You (${mediaPosts.length})` : `Following (${textPosts.length})`}
-          </button>
-        ))}
-      </div>
-
-      {tab === "media" ? (
-        mediaPosts.length === 0 ? (
-          <p className="text-center text-muted py-16">No video or photo posts yet.</p>
-        ) : (
-          <div className="grid grid-cols-3 gap-0.5">
-            {mediaPosts.map((p) => (
-              <Link key={p.id} href={`/post/${p.id}`} className="relative aspect-[9/16] bg-surface2 block overflow-hidden">
-                {p.type === "photo" ? (
-                  <img src={p.media_urls[0]} alt={p.caption} className="w-full h-full object-cover" />
-                ) : (
-                  <video src={p.media_urls[0]} className="w-full h-full object-cover" muted />
-                )}
-                <span className="absolute bottom-1.5 left-1.5 text-[11px] font-mono bg-black/50 rounded px-1.5 py-0.5">
-                  {compactNumber(p.like_count)}♥
-                </span>
-              </Link>
-            ))}
-          </div>
-        )
-      ) : textPosts.length === 0 ? (
-        <p className="text-center text-muted py-16">No text posts yet.</p>
+      {sortedPosts.length === 0 ? (
+        <p className="text-center text-muted py-16">No posts yet.</p>
       ) : (
-        textPosts.map((p) => <TextPostCard key={p.id} post={p} onPatch={(id, patch) => mutatePosts()} />)
+        sortedPosts.map((p) => <ProfilePostRow key={p.id} post={p} onPatch={patchPost} />)
       )}
     </div>
   );

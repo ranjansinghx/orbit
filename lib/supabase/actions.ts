@@ -108,7 +108,7 @@ export async function markNotificationsRead(myUserId: string) {
 
 export async function updateProfile(
   userId: string,
-  patch: Partial<{ display_name: string; bio: string; avatar_url: string }>
+  patch: Partial<{ display_name: string; bio: string; avatar_url: string; username: string }>
 ) {
   const supabase = createClient();
   const { error } = await supabase.from("profiles").update(patch).eq("id", userId);
