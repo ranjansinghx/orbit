@@ -6,7 +6,7 @@ import { useCurrentProfile } from "@/lib/supabase/useAuth";
 import { useIsSaved, useIsBlocked } from "@/lib/supabase/hooks";
 import { deletePost, toggleSave, toggleBlock } from "@/lib/supabase/actions";
 import { useUIStore } from "@/lib/store/useUIStore";
-import { MoreIcon, TrashIcon, BookmarkIcon, BlockIcon, EditIcon } from "@/components/icons";
+import { MoreIcon, TrashIcon, BookmarkIcon, BlockIcon, EditIcon, FlagIcon } from "@/components/icons";
 
 export default function PostOptionsMenu({
   postId,
@@ -23,6 +23,7 @@ export default function PostOptionsMenu({
   const router = useRouter();
   const showToast = useUIStore((s) => s.showToast);
   const openEdit = useUIStore((s) => s.openEdit);
+  const openReport = useUIStore((s) => s.openReport);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -130,13 +131,39 @@ export default function PostOptionsMenu({
               </button>
             </>
           ) : (
-            <button
-              onClick={handleBlock}
-              className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-left text-danger hover:bg-surface2 transition-colors"
-            >
-              <BlockIcon size={16} />
-              {isBlocked ? "Unblock account" : "Block account"}
-            </button>
+            <>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setOpen(false);
+                  openReport({ type: "post", id: postId });
+                }}
+                className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-left hover:bg-surface2 transition-colors"
+              >
+                <FlagIcon size={16} />
+                Report post
+              </button>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setOpen(false);
+                  openReport({ type: "user", id: authorId });
+                }}
+                className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-left hover:bg-surface2 transition-colors"
+              >
+                <FlagIcon size={16} />
+                Report account
+              </button>
+              <button
+                onClick={handleBlock}
+                className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-left text-danger hover:bg-surface2 transition-colors"
+              >
+                <BlockIcon size={16} />
+                {isBlocked ? "Unblock account" : "Block account"}
+              </button>
+            </>
           )}
         </div>
       )}

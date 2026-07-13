@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUIStore } from "@/lib/store/useUIStore";
 import { useCurrentProfile } from "@/lib/supabase/useAuth";
-import { useBlockedProfiles } from "@/lib/supabase/hooks";
-import { updateProfile, signOut, toggleBlock } from "@/lib/supabase/actions";
+import { useBlockedProfiles, useNotificationPreferences } from "@/lib/supabase/hooks";
+import { updateProfile, signOut, toggleBlock, changePassword, updateNotificationPreferences } from "@/lib/supabase/actions";
 import Avatar from "@/components/Avatar";
 import { CloseIcon } from "@/components/icons";
 
@@ -23,9 +23,15 @@ export default function SettingsModal() {
   const [bio, setBio] = useState("");
   const [saving, setSaving] = useState(false);
   const [usernameError, setUsernameError] = useState<string | null>(null);
-  const [notifLikes, setNotifLikes] = useState(true);
-  const [notifComments, setNotifComments] = useState(true);
-  const [notifFollows, setNotifFollows] = useState(true);
+
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [savingPassword, setSavingPassword] = useState(false);
+
+  const { preferences, mutate: mutatePrefs } = useNotificationPreferences(userId);
+  const [savingPrefs, setSavingPrefs] = useState<string | null>(null);
+
   const [tab, setTab] = useState<"profile" | "password" | "notifications" | "blocked">("profile");
   const { blocked, mutate: mutateBlocked } = useBlockedProfiles(userId);
 
@@ -67,6 +73,46 @@ export default function SettingsModal() {
       }
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function savePassword() {
+    setPasswordError(null);
+    if (newPassword.length < 6) {
+      setPasswordError("Password must be at least 6 characters");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError("Passwords don't match");
+      return;
+    }
+    setSavingPassword(true);
+    try {
+      await changePassword(newPassword);
+      showToast("Password updated");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: any) {
+      console.error(err);
+      setPasswordError(err?.message ?? "Couldn't update password — try again");
+    } finally {
+      setSavingPassword(false);
+    }
+  }
+
+  async function togglePref(key: "likes" | "comments" | "follows" | "new_post") {
+    if (!preferences) return;
+    const next = !preferences[key];
+    setSavingPrefs(key);
+    mutatePrefs({ ...preferences, [key]: next }, { revalidate: false });
+    try {
+      await updateNotificationPreferences(userId!, { [key]: next });
+    } catch (err) {
+      console.error(err);
+      mutatePrefs({ ...preferences, [key]: !next }, { revalidate: false });
+      showToast("Couldn't save — try again");
+    } finally {
+      setSavingPrefs(null);
     }
   }
 
@@ -141,43 +187,81 @@ export default function SettingsModal() {
 
           {tab === "password" && (
             <div className="flex flex-col gap-4">
-              <p className="text-sm text-muted">
-                Password changes go through Supabase Auth&apos;s{" "}
-                <code className="font-mono text-xs">updateUser</code> call — wire a form here that
-                calls <code className="font-mono text-xs">supabase.auth.updateUser({"{"} password {"}"})</code>.
-              </p>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-xs text-muted font-mono">New password</span>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => {
+                    setNewPassword(e.target.value);
+                    setPasswordError(null);
+                  }}
+                  minLength={6}
+                  className="bg-surface2 border border-line rounded-lg px-3 py-2.5 outline-none focus:border-muted"
+                />
+              </label>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-xs text-muted font-mono">Confirm new password</span>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    setPasswordError(null);
+                  }}
+                  minLength={6}
+                  className="bg-surface2 border border-line rounded-lg px-3 py-2.5 outline-none focus:border-muted"
+                />
+              </label>
+              {passwordError && <span className="text-danger text-xs">{passwordError}</span>}
+              <button
+                onClick={savePassword}
+                disabled={savingPassword || !newPassword || !confirmPassword}
+                className="bg-paper text-ink font-semibold rounded-full py-2.5 hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {savingPassword ? "Updating..." : "Update password"}
+              </button>
             </div>
           )}
 
           {tab === "notifications" && (
             <div className="flex flex-col gap-4">
-              {[
-                { label: "Likes", state: notifLikes, set: setNotifLikes },
-                { label: "Comments", state: notifComments, set: setNotifComments },
-                { label: "New followers", state: notifFollows, set: setNotifFollows },
-              ].map((row) => (
-                <div key={row.label} className="flex items-center justify-between">
-                  <span className="text-sm">{row.label}</span>
-                  <button
-                    onClick={() => row.set(!row.state)}
-                    className={`w-11 h-6 rounded-full relative transition-colors ${
-                      row.state ? "bg-text" : "bg-surface2 border border-line"
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 w-5 h-5 rounded-full bg-paper transition-transform ${
-                        row.state ? "translate-x-5" : "translate-x-0.5"
+              {preferences ? (
+                (
+                  [
+                    { key: "likes" as const, label: "Likes" },
+                    { key: "comments" as const, label: "Comments" },
+                    { key: "follows" as const, label: "New followers" },
+                    { key: "new_post" as const, label: "New posts from people you follow" },
+                  ]
+                ).map((row) => (
+                  <div key={row.key} className="flex items-center justify-between">
+                    <span className="text-sm">{row.label}</span>
+                    <button
+                      onClick={() => togglePref(row.key)}
+                      disabled={savingPrefs === row.key}
+                      className={`w-11 h-6 rounded-full relative transition-colors disabled:opacity-60 ${
+                        preferences[row.key] ? "bg-text" : "bg-surface2 border border-line"
                       }`}
-                    />
-                  </button>
-                </div>
-              ))}
+                    >
+                      <span
+                        className={`absolute top-0.5 w-5 h-5 rounded-full bg-paper transition-transform ${
+                          preferences[row.key] ? "translate-x-5" : "translate-x-0.5"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted">Loading...</p>
+              )}
               <p className="text-xs text-muted">
-                These are UI-only for now — persist them to a `notification_preferences` table keyed
-                by user id when you&apos;re ready to enforce them server-side.
+                Turning one off stops that notification from being created at all — it&apos;s enforced
+                server-side, not just hidden in this app.
               </p>
             </div>
           )}
+
           {tab === "blocked" && (
             <div className="flex flex-col gap-1">
               {blocked.length === 0 ? (
@@ -210,7 +294,7 @@ export default function SettingsModal() {
           )}
         </div>
 
-        {(tab === "profile" || tab === "notifications") && (
+        {tab === "profile" && (
           <div className="px-5 pb-5">
             <button
               onClick={save}

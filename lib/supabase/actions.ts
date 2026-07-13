@@ -134,6 +134,41 @@ export async function signOut() {
   window.location.href = "/login";
 }
 
+export async function changePassword(newPassword: string) {
+  const supabase = createClient();
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw error;
+}
+
+export async function updateNotificationPreferences(
+  userId: string,
+  patch: Partial<{ likes: boolean; comments: boolean; follows: boolean; new_post: boolean }>
+) {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("notification_preferences")
+    .upsert({ user_id: userId, ...patch }, { onConflict: "user_id" });
+  if (error) throw error;
+}
+
+export async function submitReport(input: {
+  reporterId: string;
+  targetType: "post" | "user";
+  targetId: string;
+  reason: string;
+  details?: string;
+}) {
+  const supabase = createClient();
+  const { error } = await supabase.from("reports").insert({
+    reporter_id: input.reporterId,
+    target_type: input.targetType,
+    target_id: input.targetId,
+    reason: input.reason,
+    details: input.details ?? null,
+  });
+  if (error) throw error;
+}
+
 export async function deletePost(postId: string) {
   const supabase = createClient();
   const { error } = await supabase.from("posts").delete().eq("id", postId);

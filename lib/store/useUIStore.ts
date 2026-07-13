@@ -2,11 +2,17 @@
 
 import { create } from "zustand";
 
+interface ReportTarget {
+  type: "post" | "user";
+  id: string;
+}
+
 interface UIState {
   composerOpen: boolean;
   commentsPostId: string | null;
   settingsOpen: boolean;
   editingPostId: string | null;
+  reportTarget: ReportTarget | null;
   toast: string | null;
   openComposer: () => void;
   closeComposer: () => void;
@@ -16,6 +22,8 @@ interface UIState {
   closeSettings: () => void;
   openEdit: (postId: string) => void;
   closeEdit: () => void;
+  openReport: (target: ReportTarget) => void;
+  closeReport: () => void;
   showToast: (msg: string) => void;
 }
 
@@ -24,6 +32,7 @@ export const useUIStore = create<UIState>((set) => ({
   commentsPostId: null,
   settingsOpen: false,
   editingPostId: null,
+  reportTarget: null,
   toast: null,
   openComposer: () => set({ composerOpen: true }),
   closeComposer: () => set({ composerOpen: false }),
@@ -33,6 +42,8 @@ export const useUIStore = create<UIState>((set) => ({
   closeSettings: () => set({ settingsOpen: false }),
   openEdit: (postId) => set({ editingPostId: postId }),
   closeEdit: () => set({ editingPostId: null }),
+  openReport: (target) => set({ reportTarget: target }),
+  closeReport: () => set({ reportTarget: null }),
   showToast: (msg) => {
     set({ toast: msg });
     setTimeout(() => set((s) => (s.toast === msg ? { toast: null } : s)), 2200);

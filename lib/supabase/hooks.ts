@@ -167,6 +167,31 @@ export function useFollowingFeed(viewerId: string | null | undefined) {
   return { posts, loadMore: load, hasMore: !done, loading, patchPost, removePost };
 }
 
+export interface NotificationPreferences {
+  likes: boolean;
+  comments: boolean;
+  follows: boolean;
+  new_post: boolean;
+}
+
+export function useNotificationPreferences(userId: string | null | undefined) {
+  const supabase = createClient();
+  const { data, mutate } = useSWR(userId ? ["notification-prefs", userId] : null, async () => {
+    const { data, error } = await supabase
+      .from("notification_preferences")
+      .select("*")
+      .eq("user_id", userId!)
+      .maybeSingle();
+    if (error) throw error;
+    // Falls back to all-on if the row is somehow missing (shouldn't happen —
+    // created automatically on signup — but keeps the UI sane either way).
+    return (data ?? { user_id: userId, likes: true, comments: true, follows: true, new_post: true }) as {
+      user_id: string;
+    } & NotificationPreferences;
+  });
+  return { preferences: data, mutate };
+}
+
 export function useProfileById(id: string | undefined) {
   const supabase = createClient();
   const { data } = useSWR(id ? ["profile-by-id", id] : null, async () => {

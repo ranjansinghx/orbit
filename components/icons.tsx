@@ -199,6 +199,20 @@ export function EditIcon({ size = 16, className }: { size?: number; className?: 
   );
 }
 
+export function FlagIcon({ size = 16, className }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M5 3v18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path
+        d="M5 4h11l-2.5 3.5L16 11H5V4Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function VideoIcon({ size = 20 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">

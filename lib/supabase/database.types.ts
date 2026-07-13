@@ -117,6 +117,31 @@ export interface Database {
         Insert: { user_id: string; post_id: string };
         Update: never;
       };
+      notification_preferences: {
+        Row: { user_id: string; likes: boolean; comments: boolean; follows: boolean; new_post: boolean };
+        Insert: { user_id: string; likes?: boolean; comments?: boolean; follows?: boolean; new_post?: boolean };
+        Update: Partial<{ likes: boolean; comments: boolean; follows: boolean; new_post: boolean }>;
+      };
+      reports: {
+        Row: {
+          id: string;
+          reporter_id: string;
+          target_type: "post" | "user";
+          target_id: string;
+          reason: string;
+          details: string | null;
+          created_at: string;
+          status: string;
+        };
+        Insert: {
+          reporter_id: string;
+          target_type: "post" | "user";
+          target_id: string;
+          reason: string;
+          details?: string | null;
+        };
+        Update: never;
+      };
     };
     Functions: {
       toggle_like: { Args: { p_post_id: string }; Returns: boolean };
