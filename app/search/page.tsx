@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useCurrentProfile } from "@/lib/supabase/useAuth";
-import { useSearch } from "@/lib/supabase/hooks";
+import { useSearch, useBlockedIds } from "@/lib/supabase/hooks";
 import PageHeader from "@/components/PageHeader";
 import Avatar from "@/components/Avatar";
 import FollowButton from "@/components/FollowButton";
@@ -14,8 +14,9 @@ export default function SearchPage() {
   const [query, setQuery] = useState("");
   const { userId: currentUserId } = useCurrentProfile();
   const { hashtags, people } = useSearch(query.trim().toLowerCase());
+  const blockedIds = useBlockedIds(currentUserId);
 
-  const filteredPeople = people.filter((p) => p.id !== currentUserId);
+  const filteredPeople = people.filter((p) => p.id !== currentUserId && !blockedIds.has(p.id));
 
   return (
     <div className="max-w-2xl mx-auto border-x border-line min-h-screen">

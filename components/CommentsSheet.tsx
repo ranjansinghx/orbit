@@ -4,9 +4,9 @@ import { useState } from "react";
 import { useUIStore } from "@/lib/store/useUIStore";
 import { useComments, useProfilesMap } from "@/lib/supabase/hooks";
 import { useCurrentProfile } from "@/lib/supabase/useAuth";
-import { addComment } from "@/lib/supabase/actions";
+import { addComment, deleteComment } from "@/lib/supabase/actions";
 import Avatar from "@/components/Avatar";
-import { CloseIcon, SendIcon } from "@/components/icons";
+import { CloseIcon, SendIcon, TrashIcon } from "@/components/icons";
 import { timeAgo } from "@/lib/format";
 
 export default function CommentsSheet() {
@@ -69,6 +69,23 @@ export default function CommentsSheet() {
                   </p>
                   <p className="text-[11px] text-muted font-mono mt-0.5">{timeAgo(c.created_at)}</p>
                 </div>
+                {c.author_id === userId && (
+                  <button
+                    onClick={async () => {
+                      if (!window.confirm("Delete this comment?")) return;
+                      try {
+                        await deleteComment(c.id);
+                        mutate();
+                      } catch (err) {
+                        console.error(err);
+                      }
+                    }}
+                    className="p-1 text-muted hover:text-danger transition-colors shrink-0 self-start"
+                    aria-label="Delete comment"
+                  >
+                    <TrashIcon size={14} />
+                  </button>
+                )}
               </div>
             );
           })}

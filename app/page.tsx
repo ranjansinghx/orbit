@@ -9,7 +9,7 @@ import OrbitMark from "@/components/OrbitMark";
 
 export default function HomePage() {
   const { userId } = useCurrentProfile();
-  const { posts, loadMore, hasMore, loading, patchPost } = useForYouFeed(userId);
+  const { posts, loadMore, hasMore, loading, patchPost, removePost } = useForYouFeed(userId);
   const containerRef = useRef<HTMLDivElement>(null);
 
   function handleScroll() {
@@ -41,7 +41,7 @@ export default function HomePage() {
         className="h-[100dvh] w-full overflow-y-scroll snap-feed no-scrollbar"
       >
         {posts.map((post) => (
-          <ForYouCard key={post.id} post={post} onPatch={patchPost} />
+          <ForYouCard key={post.id} post={post} onPatch={patchPost} onDeleted={() => removePost(post.id)} />
         ))}
         {posts.length === 0 && !loading && (
           <div className="h-[100dvh] flex flex-col items-center justify-center text-muted gap-2 px-6 text-center">

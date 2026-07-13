@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useCurrentProfile } from "@/lib/supabase/useAuth";
-import { useHashtagPosts } from "@/lib/supabase/hooks";
+import { useHashtagPosts, useBlockedIds } from "@/lib/supabase/hooks";
 import { sortForYou } from "@/lib/supabase/rank";
 import TextPostCard from "@/components/feed/TextPostCard";
 import PageHeader from "@/components/PageHeader";
@@ -25,8 +25,10 @@ export default function HashtagPage() {
   const params = useParams<{ tag: string }>();
   const tag = params.tag.toLowerCase();
   const { userId } = useCurrentProfile();
-  const { posts: tagged } = useHashtagPosts(tag);
+  const { posts: taggedRaw } = useHashtagPosts(tag);
   const followingSet = useFollowingSet(userId);
+  const blockedIds = useBlockedIds(userId);
+  const tagged = useMemo(() => taggedRaw.filter((p) => !blockedIds.has(p.author_id)), [taggedRaw, blockedIds]);
 
   const [tab, setTab] = useState<"media" | "text">("media");
 

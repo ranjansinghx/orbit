@@ -106,10 +106,22 @@ export interface Database {
         Insert: { post_id: string; hashtag_id: string };
         Update: never;
       };
+      blocks: {
+        Row: { blocker_id: string; blocked_id: string; created_at: string };
+        Insert: { blocker_id: string; blocked_id: string };
+        Update: never;
+      };
+      saved_posts: {
+        Row: { user_id: string; post_id: string; created_at: string };
+        Insert: { user_id: string; post_id: string };
+        Update: never;
+      };
     };
     Functions: {
       toggle_like: { Args: { p_post_id: string }; Returns: boolean };
       toggle_follow: { Args: { p_target_id: string }; Returns: boolean };
+      toggle_block: { Args: { p_target_id: string }; Returns: boolean };
+      toggle_save: { Args: { p_post_id: string }; Returns: boolean };
       increment_view_count: { Args: { p_post_id: string }; Returns: void };
       increment_share_count: { Args: { p_post_id: string }; Returns: void };
       get_or_create_conversation: { Args: { p_other_id: string }; Returns: string };

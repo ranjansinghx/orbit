@@ -6,15 +6,20 @@ import { useUIStore } from "@/lib/store/useUIStore";
 import { toggleLike, registerShare } from "@/lib/supabase/actions";
 import Avatar from "@/components/Avatar";
 import HashtagText from "@/components/HashtagText";
+import PostOptionsMenu from "@/components/PostOptionsMenu";
 import { compactNumber, timeAgo } from "@/lib/format";
 import { HeartIcon, CommentIcon, ShareIcon } from "@/components/icons";
 
 export default function TextPostCard({
   post,
   onPatch,
+  onDeleted,
+  onUnsaved,
 }: {
   post: FeedPost;
   onPatch?: (id: string, patch: Partial<FeedPost>) => void;
+  onDeleted?: () => void;
+  onUnsaved?: () => void;
 }) {
   const author = useProfileById(post.author_id);
   const openComments = useUIStore((s) => s.openComments);
@@ -58,6 +63,9 @@ export default function TextPostCard({
           <span className="text-muted truncate">@{author.username}</span>
           <span className="text-muted">·</span>
           <span className="text-muted font-mono text-xs">{timeAgo(post.created_at)}</span>
+          <span className="ml-auto shrink-0" onClick={(e) => e.preventDefault()}>
+            <PostOptionsMenu postId={post.id} authorId={author.id} onDeleted={onDeleted} onUnsaved={onUnsaved} />
+          </span>
         </div>
         <HashtagText text={post.caption} className="text-[15px] leading-relaxed block mt-0.5" />
 

@@ -6,10 +6,11 @@ import { useCurrentProfile } from "@/lib/supabase/useAuth";
 import { useProfileByUsername, useUserPosts, useFollowCounts } from "@/lib/supabase/hooks";
 import { useUIStore } from "@/lib/store/useUIStore";
 import { startConversation } from "@/lib/supabase/actions";
+import Link from "next/link";
 import Avatar from "@/components/Avatar";
 import FollowButton from "@/components/FollowButton";
 import ProfilePostRow from "@/components/feed/ProfilePostRow";
-import { GearIcon } from "@/components/icons";
+import { GearIcon, BookmarkIcon } from "@/components/icons";
 import { compactNumber } from "@/lib/format";
 
 export default function ProfilePage() {
@@ -52,6 +53,10 @@ export default function ProfilePage() {
     );
   }
 
+  function removePost(id: string) {
+    mutatePosts((current: any) => current?.filter((p: any) => p.id !== id), { revalidate: false });
+  }
+
   return (
     <div className="max-w-2xl mx-auto border-x border-line min-h-screen">
       <div className="px-5 py-5 border-b border-line">
@@ -59,13 +64,22 @@ export default function ProfilePage() {
           <Avatar src={user.avatar_url || `https://i.pravatar.cc/150?u=${user.id}`} alt={user.display_name} size={84} />
           <div className="flex items-center gap-2">
             {isMe ? (
-              <button
-                onClick={openSettings}
-                className="p-2 rounded-full border border-line hover:border-muted transition-colors"
-                aria-label="Settings"
-              >
-                <GearIcon />
-              </button>
+              <>
+                <Link
+                  href="/saved"
+                  className="p-2 rounded-full border border-line hover:border-muted transition-colors"
+                  aria-label="Saved posts"
+                >
+                  <BookmarkIcon size={18} />
+                </Link>
+                <button
+                  onClick={openSettings}
+                  className="p-2 rounded-full border border-line hover:border-muted transition-colors"
+                  aria-label="Settings"
+                >
+                  <GearIcon />
+                </button>
+              </>
             ) : (
               <>
                 <button
@@ -101,7 +115,9 @@ export default function ProfilePage() {
       {sortedPosts.length === 0 ? (
         <p className="text-center text-muted py-16">No posts yet.</p>
       ) : (
-        sortedPosts.map((p) => <ProfilePostRow key={p.id} post={p} onPatch={patchPost} />)
+        sortedPosts.map((p) => (
+          <ProfilePostRow key={p.id} post={p} onPatch={patchPost} onDeleted={() => removePost(p.id)} />
+        ))
       )}
     </div>
   );

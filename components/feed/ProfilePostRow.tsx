@@ -6,6 +6,7 @@ import { useUIStore } from "@/lib/store/useUIStore";
 import { toggleLike, registerShare } from "@/lib/supabase/actions";
 import Avatar from "@/components/Avatar";
 import HashtagText from "@/components/HashtagText";
+import PostOptionsMenu from "@/components/PostOptionsMenu";
 import { compactNumber, timeAgo } from "@/lib/format";
 import { HeartIcon, CommentIcon, ShareIcon, VideoIcon } from "@/components/icons";
 
@@ -13,9 +14,13 @@ import { HeartIcon, CommentIcon, ShareIcon, VideoIcon } from "@/components/icons
 export default function ProfilePostRow({
   post,
   onPatch,
+  onDeleted,
+  onUnsaved,
 }: {
   post: FeedPost;
   onPatch?: (id: string, patch: Partial<FeedPost>) => void;
+  onDeleted?: () => void;
+  onUnsaved?: () => void;
 }) {
   const author = useProfileById(post.author_id);
   const openComments = useUIStore((s) => s.openComments);
@@ -64,11 +69,14 @@ export default function ProfilePostRow({
           <span className="text-muted truncate">@{author.username}</span>
           <span className="text-muted">·</span>
           <span className="text-muted font-mono text-xs">{timeAgo(post.created_at)}</span>
-          {post.type !== "text" && (
-            <span className="ml-auto shrink-0 text-muted">
-              <VideoIcon size={14} />
-            </span>
-          )}
+          <span className="ml-auto shrink-0 flex items-center gap-1" onClick={(e) => e.preventDefault()}>
+            {post.type !== "text" && (
+              <span className="text-muted">
+                <VideoIcon size={14} />
+              </span>
+            )}
+            <PostOptionsMenu postId={post.id} authorId={author.id} onDeleted={onDeleted} onUnsaved={onUnsaved} />
+          </span>
         </div>
 
         {post.caption && (

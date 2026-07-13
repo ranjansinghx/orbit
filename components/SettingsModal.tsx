@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUIStore } from "@/lib/store/useUIStore";
 import { useCurrentProfile } from "@/lib/supabase/useAuth";
-import { updateProfile, signOut } from "@/lib/supabase/actions";
+import { useBlockedProfiles } from "@/lib/supabase/hooks";
+import { updateProfile, signOut, toggleBlock } from "@/lib/supabase/actions";
+import Avatar from "@/components/Avatar";
 import { CloseIcon } from "@/components/icons";
 
 const USERNAME_PATTERN = /^[a-z0-9_.]{3,20}$/;
@@ -24,7 +26,8 @@ export default function SettingsModal() {
   const [notifLikes, setNotifLikes] = useState(true);
   const [notifComments, setNotifComments] = useState(true);
   const [notifFollows, setNotifFollows] = useState(true);
-  const [tab, setTab] = useState<"profile" | "password" | "notifications">("profile");
+  const [tab, setTab] = useState<"profile" | "password" | "notifications" | "blocked">("profile");
+  const { blocked, mutate: mutateBlocked } = useBlockedProfiles(userId);
 
   useEffect(() => {
     if (profile) {
@@ -81,7 +84,7 @@ export default function SettingsModal() {
         </div>
 
         <div className="flex gap-1 px-5 pt-4">
-          {(["profile", "password", "notifications"] as const).map((t) => (
+          {(["profile", "password", "notifications", "blocked"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -175,17 +178,49 @@ export default function SettingsModal() {
               </p>
             </div>
           )}
+          {tab === "blocked" && (
+            <div className="flex flex-col gap-1">
+              {blocked.length === 0 ? (
+                <p className="text-sm text-muted">You haven&apos;t blocked anyone.</p>
+              ) : (
+                blocked.map((b) => (
+                  <div key={b.id} className="flex items-center gap-3 py-2.5">
+                    <Avatar src={b.avatar_url || `https://i.pravatar.cc/150?u=${b.id}`} alt={b.display_name} size={38} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{b.display_name}</p>
+                      <p className="text-xs text-muted truncate">@{b.username}</p>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await toggleBlock(b.id);
+                          mutateBlocked();
+                        } catch (err) {
+                          console.error(err);
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-full border border-line text-xs font-medium hover:border-muted transition-colors shrink-0"
+                    >
+                      Unblock
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
         </div>
 
-        <div className="px-5 pb-5">
-          <button
-            onClick={save}
-            disabled={saving}
-            className="w-full bg-paper text-ink font-semibold rounded-full py-2.5 hover:opacity-90 transition-opacity disabled:opacity-50"
-          >
-            {saving ? "Saving..." : "Save changes"}
-          </button>
-        </div>
+        {(tab === "profile" || tab === "notifications") && (
+          <div className="px-5 pb-5">
+            <button
+              onClick={save}
+              disabled={saving}
+              className="w-full bg-paper text-ink font-semibold rounded-full py-2.5 hover:opacity-90 transition-opacity disabled:opacity-50"
+            >
+              {saving ? "Saving..." : "Save changes"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

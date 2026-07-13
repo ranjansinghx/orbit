@@ -103,7 +103,11 @@ export function useForYouFeed(viewerId: string | null | undefined) {
     setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
   }, []);
 
-  return { posts, loadMore: load, hasMore: !done, loading, patchPost };
+  const removePost = useCallback((id: string) => {
+    setPosts((prev) => prev.filter((p) => p.id !== id));
+  }, []);
+
+  return { posts, loadMore: load, hasMore: !done, loading, patchPost, removePost };
 }
 
 /** Following: chronological text-only feed from followed accounts. */
@@ -156,7 +160,11 @@ export function useFollowingFeed(viewerId: string | null | undefined) {
     setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
   }, []);
 
-  return { posts, loadMore: load, hasMore: !done, loading, patchPost };
+  const removePost = useCallback((id: string) => {
+    setPosts((prev) => prev.filter((p) => p.id !== id));
+  }, []);
+
+  return { posts, loadMore: load, hasMore: !done, loading, patchPost, removePost };
 }
 
 export function useProfileById(id: string | undefined) {
@@ -309,6 +317,27 @@ export function useSearch(query: string) {
   return { hashtags: data?.hashtags ?? [], people: data?.people ?? [] };
 }
 
+/** People you don't already follow yet — used to fix the empty-Following-feed problem. */
+export function useSuggestedFollows(viewerId: string | null | undefined, limit = 6) {
+  const supabase = createClient();
+  const blockedIds = useBlockedIds(viewerId);
+  const { data, mutate } = useSWR(
+    viewerId ? ["suggested-follows", viewerId, blockedIds.size] : null,
+    async () => {
+      const { data: following } = await supabase.from("follows").select("followee_id").eq("follower_id", viewerId!);
+      const excludeIds = new Set([viewerId!, ...(following ?? []).map((f) => f.followee_id), ...blockedIds]);
+      const { data: people, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(limit + excludeIds.size);
+      if (error) throw error;
+      return (people ?? []).filter((p) => !excludeIds.has(p.id)).slice(0, limit) as Profile[];
+    }
+  );
+  return { people: data ?? [], mutate };
+}
+
 export function useConversations(myId: string | null | undefined) {
   const supabase = createClient();
   const { data, mutate } = useSWR(myId ? ["conversations", myId] : null, async () => {
@@ -439,3 +468,77 @@ export function useUnreadCounts(myId: string | null | undefined) {
 
   return data ?? { notifications: 0, messages: 0 };
 }
+
+// ---------------------------------------------------------------------
+// Blocking + saved posts
+// ---------------------------------------------------------------------
+
+export function useIsBlocked(viewerId: string | null | undefined, targetId: string | undefined) {
+  const supabase = createClient();
+  const { data, mutate } = useSWR(
+    viewerId && targetId ? ["is-blocked", viewerId, targetId] : null,
+    async () => {
+      const { data } = await supabase
+        .from("blocks")
+        .select("blocker_id")
+        .eq("blocker_id", viewerId!)
+        .eq("blocked_id", targetId!)
+        .maybeSingle();
+      return !!data;
+    }
+  );
+  return { isBlocked: !!data, mutate };
+}
+
+/** All the ids the current user has blocked — used to filter feeds/search client-side. */
+export function useBlockedIds(myId: string | null | undefined) {
+  const supabase = createClient();
+  const { data } = useSWR(myId ? ["blocked-ids", myId] : null, async () => {
+    const { data } = await supabase.from("blocks").select("blocked_id").eq("blocker_id", myId!);
+    return new Set((data ?? []).map((b) => b.blocked_id));
+  });
+  return data ?? new Set<string>();
+}
+
+export function useBlockedProfiles(myId: string | null | undefined) {
+  const supabase = createClient();
+  const { data, mutate } = useSWR(myId ? ["blocked-profiles", myId] : null, async () => {
+    const { data, error } = await supabase
+      .from("blocks")
+      .select("blocked_id, profiles!blocks_blocked_id_fkey(*)")
+      .eq("blocker_id", myId!);
+    if (error) throw error;
+    return (data ?? []).map((r: any) => r.profiles as Profile).filter(Boolean);
+  });
+  return { blocked: data ?? [], mutate };
+}
+
+export function useIsSaved(myId: string | null | undefined, postId: string | undefined) {
+  const supabase = createClient();
+  const { data, mutate } = useSWR(myId && postId ? ["is-saved", myId, postId] : null, async () => {
+    const { data } = await supabase
+      .from("saved_posts")
+      .select("post_id")
+      .eq("user_id", myId!)
+      .eq("post_id", postId!)
+      .maybeSingle();
+    return !!data;
+  });
+  return { isSaved: !!data, mutate };
+}
+
+export function useSavedFeed(myId: string | null | undefined) {
+  const supabase = createClient();
+  const { data, mutate } = useSWR(myId ? ["saved-feed", myId] : null, async () => {
+    const { data, error } = await supabase
+      .from("saved_posts")
+      .select("post_id, created_at, posts(*)")
+      .eq("user_id", myId!)
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    const posts = (data ?? []).map((r: any) => r.posts).filter(Boolean);
+    return (await hydratePosts(supabase, posts, myId ?? null)) as FeedPost[];
+  });
+  return { posts: data ?? [], mutate };
+}
+

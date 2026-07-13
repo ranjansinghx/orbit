@@ -120,3 +120,29 @@ export async function signOut() {
   await supabase.auth.signOut();
   window.location.href = "/login";
 }
+
+export async function deletePost(postId: string) {
+  const supabase = createClient();
+  const { error } = await supabase.from("posts").delete().eq("id", postId);
+  if (error) throw error;
+}
+
+export async function deleteComment(commentId: string) {
+  const supabase = createClient();
+  const { error } = await supabase.from("comments").delete().eq("id", commentId);
+  if (error) throw error;
+}
+
+export async function toggleBlock(targetId: string) {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("toggle_block", { p_target_id: targetId });
+  if (error) throw error;
+  return data as boolean; // true = now blocked
+}
+
+export async function toggleSave(postId: string) {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("toggle_save", { p_post_id: postId });
+  if (error) throw error;
+  return data as boolean; // true = now saved
+}

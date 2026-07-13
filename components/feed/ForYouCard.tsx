@@ -10,15 +10,18 @@ import { useInView } from "@/hooks/useInView";
 import Avatar from "@/components/Avatar";
 import FollowButton from "@/components/FollowButton";
 import HashtagText from "@/components/HashtagText";
+import PostOptionsMenu from "@/components/PostOptionsMenu";
 import { compactNumber } from "@/lib/format";
 import { HeartIcon, CommentIcon, ShareIcon } from "@/components/icons";
 
 export default function ForYouCard({
   post,
   onPatch,
+  onDeleted,
 }: {
   post: FeedPost;
   onPatch: (id: string, patch: Partial<FeedPost>) => void;
+  onDeleted?: () => void;
 }) {
   const author = useProfileById(post.author_id);
   const openComments = useUIStore((s) => s.openComments);
@@ -140,6 +143,10 @@ export default function ForYouCard({
           {muted ? "Unmute" : "Mute"}
         </button>
       )}
+
+      <div className="absolute top-3 left-3 bg-black/40 rounded-full backdrop-blur-sm" onClick={(e) => e.stopPropagation()}>
+        <PostOptionsMenu postId={post.id} authorId={author.id} onDeleted={onDeleted} />
+      </div>
 
       <div className="absolute left-0 right-16 bottom-6 md:bottom-8 px-4 flex flex-col gap-2.5">
         <div className="flex items-center gap-2.5">

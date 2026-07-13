@@ -5,12 +5,13 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCurrentProfile } from "@/lib/supabase/useAuth";
 import { usePost, useComments, useProfileById, useProfilesMap } from "@/lib/supabase/hooks";
-import { toggleLike, addComment, registerShare } from "@/lib/supabase/actions";
+import { toggleLike, addComment, registerShare, deleteComment } from "@/lib/supabase/actions";
 import { useUIStore } from "@/lib/store/useUIStore";
 import Avatar from "@/components/Avatar";
 import FollowButton from "@/components/FollowButton";
 import HashtagText from "@/components/HashtagText";
-import { HeartIcon, CommentIcon, ShareIcon, SendIcon } from "@/components/icons";
+import PostOptionsMenu from "@/components/PostOptionsMenu";
+import { HeartIcon, CommentIcon, ShareIcon, SendIcon, TrashIcon } from "@/components/icons";
 import { compactNumber, timeAgo } from "@/lib/format";
 
 export default function PostDetailPage() {
@@ -93,6 +94,7 @@ export default function PostDetailPage() {
             <span className="text-muted text-sm">@{author.username}</span>
           </div>
           <FollowButton userId={author.id} size="sm" variant="outline" />
+          <PostOptionsMenu postId={post.id} authorId={author.id} onDeleted={() => router.push("/")} />
         </div>
 
         {post.type !== "text" && (
@@ -157,6 +159,24 @@ export default function PostDetailPage() {
               </p>
               <p className="text-[11px] text-muted font-mono mt-0.5">{timeAgo(c.created_at)}</p>
             </div>
+            {c.author_id === userId && (
+              <button
+                onClick={async () => {
+                  if (!window.confirm("Delete this comment?")) return;
+                  try {
+                    await deleteComment(c.id);
+                    mutateComments();
+                    mutatePost();
+                  } catch (err) {
+                    console.error(err);
+                  }
+                }}
+                className="p-1 text-muted hover:text-danger transition-colors shrink-0 self-start"
+                aria-label="Delete comment"
+              >
+                <TrashIcon size={15} />
+              </button>
+            )}
           </div>
         );
       })}
