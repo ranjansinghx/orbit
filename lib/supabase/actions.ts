@@ -54,6 +54,19 @@ export async function registerView(postId: string) {
   if (error) throw error;
 }
 
+export async function updatePostCaption(postId: string, caption: string) {
+  const supabase = createClient();
+  const { error } = await supabase.from("posts").update({ caption }).eq("id", postId);
+  if (error) throw error;
+}
+
+export async function recordWatchTime(postId: string, ratio: number) {
+  const supabase = createClient();
+  const clamped = Math.max(0, Math.min(1, ratio));
+  const { error } = await supabase.rpc("record_watch_time", { p_post_id: postId, p_ratio: clamped });
+  if (error) throw error;
+}
+
 export async function registerShare(postId: string) {
   const supabase = createClient();
   const { error } = await supabase.rpc("increment_share_count", { p_post_id: postId });

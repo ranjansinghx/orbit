@@ -6,7 +6,7 @@ import { useCurrentProfile } from "@/lib/supabase/useAuth";
 import { useIsSaved, useIsBlocked } from "@/lib/supabase/hooks";
 import { deletePost, toggleSave, toggleBlock } from "@/lib/supabase/actions";
 import { useUIStore } from "@/lib/store/useUIStore";
-import { MoreIcon, TrashIcon, BookmarkIcon, BlockIcon } from "@/components/icons";
+import { MoreIcon, TrashIcon, BookmarkIcon, BlockIcon, EditIcon } from "@/components/icons";
 
 export default function PostOptionsMenu({
   postId,
@@ -22,6 +22,7 @@ export default function PostOptionsMenu({
   const { userId } = useCurrentProfile();
   const router = useRouter();
   const showToast = useUIStore((s) => s.showToast);
+  const openEdit = useUIStore((s) => s.openEdit);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -107,13 +108,27 @@ export default function PostOptionsMenu({
             {isSaved ? "Remove from saved" : "Save post"}
           </button>
           {isOwner ? (
-            <button
-              onClick={handleDelete}
-              className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-left text-danger hover:bg-surface2 transition-colors"
-            >
-              <TrashIcon size={16} />
-              Delete post
-            </button>
+            <>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setOpen(false);
+                  openEdit(postId);
+                }}
+                className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-left hover:bg-surface2 transition-colors"
+              >
+                <EditIcon size={16} />
+                Edit post
+              </button>
+              <button
+                onClick={handleDelete}
+                className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-left text-danger hover:bg-surface2 transition-colors"
+              >
+                <TrashIcon size={16} />
+                Delete post
+              </button>
+            </>
           ) : (
             <button
               onClick={handleBlock}

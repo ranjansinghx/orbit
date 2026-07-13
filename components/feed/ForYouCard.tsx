@@ -5,7 +5,7 @@ import Link from "next/link";
 import { FeedPost } from "@/lib/supabase/hooks";
 import { useProfileById } from "@/lib/supabase/hooks";
 import { useUIStore } from "@/lib/store/useUIStore";
-import { toggleLike, registerView, registerShare } from "@/lib/supabase/actions";
+import { toggleLike, registerView, registerShare, recordWatchTime } from "@/lib/supabase/actions";
 import { useInView } from "@/hooks/useInView";
 import Avatar from "@/components/Avatar";
 import FollowButton from "@/components/FollowButton";
@@ -33,6 +33,8 @@ export default function ForYouCard({
   const [carouselIdx, setCarouselIdx] = useState(0);
   const hasCountedView = useRef(false);
   const [burst, setBurst] = useState(false);
+  const maxWatchRatio = useRef(0);
+  const hasSubmittedWatchTime = useRef(false);
 
   useEffect(() => {
     if (inView && !hasCountedView.current) {
@@ -47,11 +49,37 @@ export default function ForYouCard({
     const v = videoRef.current;
     if (!v) return;
     if (inView) {
+      hasSubmittedWatchTime.current = false;
       v.play().catch(() => {});
     } else {
       v.pause();
+      // Submit whatever fraction of the clip was watched once it scrolls
+      // out of view — this is the real signal behind watch_time_ratio in
+      // the ranking formula, not a placeholder.
+      if (post.type === "video" && maxWatchRatio.current > 0 && !hasSubmittedWatchTime.current) {
+        hasSubmittedWatchTime.current = true;
+        recordWatchTime(post.id, maxWatchRatio.current).catch(() => {});
+        maxWatchRatio.current = 0;
+      }
     }
-  }, [inView]);
+  }, [inView, post.id, post.type]);
+
+  useEffect(() => {
+    return () => {
+      // Submit on unmount too (e.g. navigating away mid-watch).
+      if (post.type === "video" && maxWatchRatio.current > 0 && !hasSubmittedWatchTime.current) {
+        recordWatchTime(post.id, maxWatchRatio.current).catch(() => {});
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleTimeUpdate() {
+    const v = videoRef.current;
+    if (!v || !v.duration) return;
+    const ratio = v.currentTime / v.duration;
+    if (ratio > maxWatchRatio.current) maxWatchRatio.current = ratio;
+  }
 
   async function handleLike() {
     const wasLiked = post.liked_by_me;
@@ -103,6 +131,7 @@ export default function ForYouCard({
           muted={muted}
           loop
           playsInline
+          onTimeUpdate={handleTimeUpdate}
           className="h-full w-full object-cover"
         />
       ) : (

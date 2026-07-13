@@ -39,6 +39,7 @@ export interface Database {
           comment_count: number;
           share_count: number;
           watch_time_ratio: number;
+          watch_sample_count: number;
         };
         Insert: {
           author_id: string;
@@ -120,6 +121,7 @@ export interface Database {
     Functions: {
       toggle_like: { Args: { p_post_id: string }; Returns: boolean };
       toggle_follow: { Args: { p_target_id: string }; Returns: boolean };
+      record_watch_time: { Args: { p_post_id: string; p_ratio: number }; Returns: void };
       toggle_block: { Args: { p_target_id: string }; Returns: boolean };
       toggle_save: { Args: { p_post_id: string }; Returns: boolean };
       increment_view_count: { Args: { p_post_id: string }; Returns: void };

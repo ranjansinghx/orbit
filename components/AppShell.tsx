@@ -6,6 +6,7 @@ import BottomTabs from "@/components/BottomTabs";
 import Composer from "@/components/Composer";
 import CommentsSheet from "@/components/CommentsSheet";
 import SettingsModal from "@/components/SettingsModal";
+import EditPostModal from "@/components/EditPostModal";
 import Toast from "@/components/Toast";
 import { PlusIcon } from "@/components/icons";
 import { useUIStore } from "@/lib/store/useUIStore";
@@ -39,6 +40,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <Composer />
       <CommentsSheet />
       <SettingsModal />
+      <EditPostModal />
       <Toast />
     </div>
   );
