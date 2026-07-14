@@ -142,7 +142,7 @@ export async function changePassword(newPassword: string) {
 
 export async function updateNotificationPreferences(
   userId: string,
-  patch: Partial<{ likes: boolean; comments: boolean; follows: boolean; new_post: boolean }>
+  patch: Partial<{ likes: boolean; comments: boolean; follows: boolean; new_post: boolean; mentions: boolean }>
 ) {
   const supabase = createClient();
   const { error } = await supabase

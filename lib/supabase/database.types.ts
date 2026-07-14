@@ -1,5 +1,5 @@
 export type PostType = "video" | "photo" | "text";
-export type NotificationType = "like" | "comment" | "follow" | "new_post";
+export type NotificationType = "like" | "comment" | "follow" | "new_post" | "mention";
 
 export interface Database {
   public: {
@@ -118,9 +118,16 @@ export interface Database {
         Update: never;
       };
       notification_preferences: {
-        Row: { user_id: string; likes: boolean; comments: boolean; follows: boolean; new_post: boolean };
-        Insert: { user_id: string; likes?: boolean; comments?: boolean; follows?: boolean; new_post?: boolean };
-        Update: Partial<{ likes: boolean; comments: boolean; follows: boolean; new_post: boolean }>;
+        Row: { user_id: string; likes: boolean; comments: boolean; follows: boolean; new_post: boolean; mentions: boolean };
+        Insert: {
+          user_id: string;
+          likes?: boolean;
+          comments?: boolean;
+          follows?: boolean;
+          new_post?: boolean;
+          mentions?: boolean;
+        };
+        Update: Partial<{ likes: boolean; comments: boolean; follows: boolean; new_post: boolean; mentions: boolean }>;
       };
       reports: {
         Row: {

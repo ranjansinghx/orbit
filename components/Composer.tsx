@@ -199,8 +199,8 @@ export default function Composer() {
             onChange={(e) => setCaption(e.target.value)}
             placeholder={
               type === "text"
-                ? "What's on your mind? Use #hashtags to tag it."
-                : "Write a caption... #hashtags work here too"
+                ? "What's on your mind? Use #hashtags and @mentions."
+                : "Write a caption... #hashtags and @mentions work here too"
             }
             rows={type === "text" ? 5 : 3}
             className="w-full bg-surface2 rounded-xl p-3 text-[15px] placeholder:text-muted outline-none resize-none mb-4 border border-line focus:border-muted"

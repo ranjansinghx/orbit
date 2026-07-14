@@ -155,7 +155,7 @@ export default function PostDetailPage() {
             <div className="flex-1 min-w-0">
               <p className="text-sm">
                 <span className="font-semibold mr-1.5">{commentAuthor.username}</span>
-                {c.body}
+                <HashtagText text={c.body} />
               </p>
               <p className="text-[11px] text-muted font-mono mt-0.5">{timeAgo(c.created_at)}</p>
             </div>

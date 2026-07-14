@@ -100,7 +100,7 @@ export default function SettingsModal() {
     }
   }
 
-  async function togglePref(key: "likes" | "comments" | "follows" | "new_post") {
+  async function togglePref(key: "likes" | "comments" | "follows" | "new_post" | "mentions") {
     if (!preferences) return;
     const next = !preferences[key];
     setSavingPrefs(key);
@@ -233,6 +233,7 @@ export default function SettingsModal() {
                     { key: "comments" as const, label: "Comments" },
                     { key: "follows" as const, label: "New followers" },
                     { key: "new_post" as const, label: "New posts from people you follow" },
+                    { key: "mentions" as const, label: "Mentions" },
                   ]
                 ).map((row) => (
                   <div key={row.key} className="flex items-center justify-between">

@@ -172,6 +172,7 @@ export interface NotificationPreferences {
   comments: boolean;
   follows: boolean;
   new_post: boolean;
+  mentions: boolean;
 }
 
 export function useNotificationPreferences(userId: string | null | undefined) {
@@ -185,7 +186,7 @@ export function useNotificationPreferences(userId: string | null | undefined) {
     if (error) throw error;
     // Falls back to all-on if the row is somehow missing (shouldn't happen —
     // created automatically on signup — but keeps the UI sane either way).
-    return (data ?? { user_id: userId, likes: true, comments: true, follows: true, new_post: true }) as {
+    return (data ?? { user_id: userId, likes: true, comments: true, follows: true, new_post: true, mentions: true }) as {
       user_id: string;
     } & NotificationPreferences;
   });

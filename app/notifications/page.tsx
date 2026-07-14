@@ -8,7 +8,7 @@ import { markNotificationsRead } from "@/lib/supabase/actions";
 import PageHeader from "@/components/PageHeader";
 import Avatar from "@/components/Avatar";
 import { timeAgo } from "@/lib/format";
-import { HeartIcon, CommentIcon, ProfileIcon, VideoIcon } from "@/components/icons";
+import { HeartIcon, CommentIcon, ProfileIcon, VideoIcon, AtIcon } from "@/components/icons";
 import clsx from "clsx";
 
 function copyFor(type: string) {
@@ -21,6 +21,8 @@ function copyFor(type: string) {
       return "started following you";
     case "new_post":
       return "shared a new post";
+    case "mention":
+      return "mentioned you";
     default:
       return "";
   }
@@ -30,6 +32,7 @@ function NotificationIcon({ type }: { type: string }) {
   if (type === "like") return <HeartIcon filled size={18} />;
   if (type === "comment") return <CommentIcon size={18} />;
   if (type === "follow") return <ProfileIcon active size={18} />;
+  if (type === "mention") return <AtIcon size={16} className="text-paper" />;
   return <VideoIcon size={18} />;
 }
 
@@ -58,7 +61,9 @@ function NotificationRow({ n, actorId, postId }: { n: any; actorId: string; post
       <p className="text-sm flex-1">
         <span className="font-semibold">{actor.display_name}</span>{" "}
         <span className="text-paper/85">{copyFor(n.type)}</span>
-        {post && post.type !== "text" && <span className="text-muted"> · {post.caption.slice(0, 40)}</span>}
+        {post && (post.type !== "text" || n.type === "mention") && (
+          <span className="text-muted"> · {post.caption.slice(0, 40)}</span>
+        )}
       </p>
       {post && post.type === "photo" && post.media_urls[0] && (
         <img src={post.media_urls[0]} alt="" className="w-11 h-11 rounded-md object-cover shrink-0" />
