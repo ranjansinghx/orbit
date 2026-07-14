@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUIStore } from "@/lib/store/useUIStore";
 import { useCurrentProfile } from "@/lib/supabase/useAuth";
 import { useBlockedProfiles, useNotificationPreferences } from "@/lib/supabase/hooks";
 import { updateProfile, signOut, toggleBlock, changePassword, updateNotificationPreferences } from "@/lib/supabase/actions";
+import { uploadMedia } from "@/lib/supabase/upload";
 import Avatar from "@/components/Avatar";
-import { CloseIcon } from "@/components/icons";
+import { CloseIcon, ImageIcon } from "@/components/icons";
 
 const USERNAME_PATTERN = /^[a-z0-9_.]{3,20}$/;
 
@@ -23,6 +24,9 @@ export default function SettingsModal() {
   const [bio, setBio] = useState("");
   const [saving, setSaving] = useState(false);
   const [usernameError, setUsernameError] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -40,6 +44,7 @@ export default function SettingsModal() {
       setDisplayName(profile.display_name);
       setUsername(profile.username);
       setBio(profile.bio);
+      setAvatarUrl(profile.avatar_url);
     }
   }, [profile]);
 
@@ -56,7 +61,7 @@ export default function SettingsModal() {
     setSaving(true);
     const usernameChanged = cleanUsername !== profile!.username;
     try {
-      await updateProfile(userId!, { display_name: displayName, bio, username: cleanUsername });
+      await updateProfile(userId!, { display_name: displayName, bio, username: cleanUsername, avatar_url: avatarUrl });
       mutate();
       showToast("Settings saved");
       close();
@@ -73,6 +78,28 @@ export default function SettingsModal() {
       }
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !userId) return;
+    setUploadingAvatar(true);
+    try {
+      const url = await uploadMedia(file, userId);
+      setAvatarUrl(url);
+      // Save immediately rather than waiting for "Save changes" — a new
+      // photo is a distinct action from editing text fields, and this
+      // avoids losing the upload if the person navigates away.
+      await updateProfile(userId, { avatar_url: url });
+      mutate();
+      showToast("Profile photo updated");
+    } catch (err) {
+      console.error(err);
+      showToast("Couldn't upload photo — try again");
+    } finally {
+      setUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
     }
   }
 
@@ -146,6 +173,40 @@ export default function SettingsModal() {
         <div className="px-5 py-5">
           {tab === "profile" && (
             <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-4">
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                />
+                <button
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={uploadingAvatar}
+                  className="relative shrink-0 disabled:opacity-60"
+                  aria-label="Change profile photo"
+                >
+                  <Avatar
+                    src={avatarUrl || `https://i.pravatar.cc/150?u=${userId}`}
+                    alt={displayName}
+                    size={64}
+                  />
+                  <span className="absolute -bottom-1 -right-1 bg-paper text-ink rounded-full p-1.5 border-2 border-surface">
+                    <ImageIcon size={13} className="opacity-100" />
+                  </span>
+                </button>
+                <div className="flex flex-col gap-0.5">
+                  <button
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={uploadingAvatar}
+                    className="text-sm font-medium text-text disabled:opacity-60"
+                  >
+                    {uploadingAvatar ? "Uploading..." : "Change photo"}
+                  </button>
+                  <span className="text-xs text-muted">JPG or PNG</span>
+                </div>
+              </div>
               <label className="flex flex-col gap-1.5">
                 <span className="text-xs text-muted font-mono">Username</span>
                 <div className="flex items-center gap-1.5 bg-surface2 border border-line rounded-lg px-3 py-2.5 focus-within:border-muted">
