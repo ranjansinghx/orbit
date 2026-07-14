@@ -6,6 +6,7 @@ import { useCurrentProfile } from "@/lib/supabase/useAuth";
 import { useForYouFeed } from "@/lib/supabase/hooks";
 import ForYouCard from "@/components/feed/ForYouCard";
 import OrbitMark from "@/components/OrbitMark";
+import { TextIcon, SearchIcon } from "@/components/icons";
 
 export default function HomePage() {
   const { userId } = useCurrentProfile();
@@ -27,12 +28,22 @@ export default function HomePage() {
           <OrbitMark size={22} />
           <span className="font-display italic text-lg">Orbit</span>
         </div>
-        <Link
-          href="/text"
-          className="pointer-events-auto text-xs font-mono text-muted bg-black/40 backdrop-blur-sm rounded-full px-3 py-1.5"
-        >
-          Following →
-        </Link>
+        <div className="flex items-center gap-2 pointer-events-auto">
+          <Link
+            href="/text"
+            aria-label="Following (text feed)"
+            className="bg-black/40 backdrop-blur-sm rounded-full p-2"
+          >
+            <TextIcon size={19} active />
+          </Link>
+          <Link
+            href="/search"
+            aria-label="Search"
+            className="bg-black/40 backdrop-blur-sm rounded-full p-2"
+          >
+            <SearchIcon size={19} active />
+          </Link>
+        </div>
       </div>
 
       <div

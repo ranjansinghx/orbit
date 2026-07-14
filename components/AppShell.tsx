@@ -9,12 +9,9 @@ import SettingsModal from "@/components/SettingsModal";
 import EditPostModal from "@/components/EditPostModal";
 import ReportModal from "@/components/ReportModal";
 import Toast from "@/components/Toast";
-import { PlusIcon } from "@/components/icons";
-import { useUIStore } from "@/lib/store/useUIStore";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const openComposer = useUIStore((s) => s.openComposer);
   const isFullScreenFeed = pathname === "/";
   const isLogin = pathname === "/login";
 
@@ -27,16 +24,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
       <BottomTabs />
-
-      {!isFullScreenFeed && (
-        <button
-          onClick={openComposer}
-          aria-label="Create post"
-          className="md:hidden fixed bottom-20 right-4 z-40 w-14 h-14 rounded-full bg-paper text-ink flex items-center justify-center shadow-xl active:scale-95 transition-transform"
-        >
-          <PlusIcon size={26} />
-        </button>
-      )}
 
       <Composer />
       <CommentsSheet />

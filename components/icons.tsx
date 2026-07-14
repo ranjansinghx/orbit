@@ -33,9 +33,10 @@ export function MessagesIcon({ active, size = 22, className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
       <path
-        d="M21 12c0 4.14-4.03 7.5-9 7.5-1.06 0-2.08-.15-3.02-.43L4 20.5l1.2-3.6C4.44 15.7 4 13.9 4 12c0-4.14 4.03-7.5 9-7.5s8 3.36 8 7.5Z"
+        d="M21.5 2.5 11 13M21.5 2.5 15 21.5l-4-8.5-8.5-4L21.5 2.5Z"
         stroke={stroke(active)}
-        strokeWidth="1.8"
+        strokeWidth="1.7"
+        strokeLinecap="round"
         strokeLinejoin="round"
       />
     </svg>
@@ -65,6 +66,15 @@ export function SearchIcon({ active, size = 22, className }: IconProps) {
   );
 }
 
+export function ComposeIcon({ active, size = 22, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <rect x="3.5" y="3.5" width="17" height="17" rx="5" stroke={stroke(active)} strokeWidth="1.8" />
+      <path d="M12 8v8M8 12h8" stroke={stroke(active)} strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function ProfileIcon({ active, size = 22, className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
@@ -83,6 +93,7 @@ export const NAV_ICONS: Record<string, (p: IconProps) => JSX.Element> = {
   home: HomeIcon,
   text: TextIcon,
   messages: MessagesIcon,
+  compose: ComposeIcon,
   notifications: NotificationsIcon,
   search: SearchIcon,
   profile: ProfileIcon,
