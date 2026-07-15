@@ -61,7 +61,7 @@ export default function ProfilePage() {
     <div className="max-w-2xl mx-auto border-x border-line min-h-screen">
       <div className="px-5 py-5 border-b border-line">
         <div className="flex items-start justify-between">
-          <Avatar src={user.avatar_url || `https://i.pravatar.cc/150?u=${user.id}`} alt={user.display_name} size={84} />
+          <Avatar src={user.avatar_url} alt={user.display_name} size={84} />
           <div className="flex items-center gap-2">
             {isMe ? (
               <>

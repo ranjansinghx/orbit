@@ -181,7 +181,7 @@ export default function ForYouCard({
       <div className="absolute left-0 right-16 bottom-6 md:bottom-8 px-4 flex flex-col gap-2.5">
         <div className="flex items-center gap-2.5">
           <Link href={`/profile/${author.username}`}>
-            <Avatar src={author.avatar_url || `https://i.pravatar.cc/150?u=${author.id}`} alt={author.display_name} size={38} />
+            <Avatar src={author.avatar_url} alt={author.display_name} size={38} />
           </Link>
           <Link href={`/profile/${author.username}`} className="font-semibold text-[15px]">
             @{author.username}

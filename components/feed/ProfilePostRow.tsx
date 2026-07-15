@@ -79,7 +79,7 @@ export default function ProfilePostRow({
       className="flex gap-3 px-4 py-4 border-b border-line hover:bg-surface/40 transition-colors"
     >
       <Avatar
-        src={author.avatar_url || `https://i.pravatar.cc/150?u=${author.id}`}
+        src={author.avatar_url}
         alt={author.display_name}
         size={42}
         className="mt-0.5"

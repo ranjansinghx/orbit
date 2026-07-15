@@ -101,7 +101,7 @@ export default function PostDetailPage() {
       <div className="px-5 py-4 border-b border-line">
         <div className="flex items-center gap-2.5 mb-3">
           <Link href={`/profile/${author.username}`}>
-            <Avatar src={author.avatar_url || `https://i.pravatar.cc/150?u=${author.id}`} alt={author.display_name} size={44} />
+            <Avatar src={author.avatar_url} alt={author.display_name} size={44} />
           </Link>
           <div className="flex-1 min-w-0">
             <Link href={`/profile/${author.username}`} className="font-semibold block truncate">
@@ -165,7 +165,7 @@ export default function PostDetailPage() {
       </div>
 
       <div className="flex items-center gap-3 px-5 py-3 border-b border-line">
-        {me && <Avatar src={me.avatar_url || `https://i.pravatar.cc/150?u=${me.id}`} alt={me.display_name} size={34} />}
+        {me && <Avatar src={me.avatar_url} alt={me.display_name} size={34} />}
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -184,7 +184,7 @@ export default function PostDetailPage() {
         return (
           <div key={c.id} className="flex gap-3 px-5 py-3 border-b border-line">
             <Avatar
-              src={commentAuthor.avatar_url || `https://i.pravatar.cc/150?u=${commentAuthor.id}`}
+              src={commentAuthor.avatar_url}
               alt={commentAuthor.display_name}
               size={36}
             />

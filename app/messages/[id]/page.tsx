@@ -144,7 +144,7 @@ export default function ChatThreadPage() {
           ←
         </Link>
         <Link href={`/profile/${other.username}`}>
-          <Avatar src={other.avatar_url || `https://i.pravatar.cc/150?u=${other.id}`} alt={other.display_name} size={38} />
+          <Avatar src={other.avatar_url} alt={other.display_name} size={38} />
         </Link>
         <div className="flex-1 min-w-0">
           <Link href={`/profile/${other.username}`} className="font-semibold block truncate">

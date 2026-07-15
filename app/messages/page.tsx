@@ -59,7 +59,7 @@ export default function MessagesPage() {
             href={`/messages/${c.id}`}
             className="flex items-center gap-3 px-5 py-4 border-b border-line hover:bg-surface/40 transition-colors"
           >
-            <Avatar src={other.avatar_url || `https://i.pravatar.cc/150?u=${other.id}`} alt={other.display_name} size={50} />
+            <Avatar src={other.avatar_url} alt={other.display_name} size={50} />
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
                 <p className="font-semibold truncate">{other.display_name}</p>

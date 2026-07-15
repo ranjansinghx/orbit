@@ -59,7 +59,7 @@ export default function SearchPage() {
           {filteredPeople.map((u) => (
             <div key={u.id} className="flex items-center gap-3 py-3">
               <Link href={`/profile/${u.username}`}>
-                <Avatar src={u.avatar_url || `https://i.pravatar.cc/150?u=${u.id}`} alt={u.display_name} size={44} />
+                <Avatar src={u.avatar_url} alt={u.display_name} size={44} />
               </Link>
               <Link href={`/profile/${u.username}`} className="flex-1 min-w-0">
                 <p className="font-semibold truncate">{u.display_name}</p>

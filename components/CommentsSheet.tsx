@@ -62,7 +62,7 @@ export default function CommentsSheet() {
             if (!author) return null;
             return (
               <div key={c.id} className="flex gap-3 py-3">
-                <Avatar src={author.avatar_url || "https://i.pravatar.cc/150?u=" + author.id} alt={author.display_name} size={36} />
+                <Avatar src={author.avatar_url} alt={author.display_name} size={36} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm">
                     <span className="font-semibold mr-1.5">{author.username}</span>
@@ -93,7 +93,7 @@ export default function CommentsSheet() {
         </div>
 
         <div className="flex items-center gap-3 px-4 py-3 border-t border-line">
-          {me && <Avatar src={me.avatar_url || "https://i.pravatar.cc/150?u=" + me.id} alt={me.display_name} size={32} />}
+          {me && <Avatar src={me.avatar_url} alt={me.display_name} size={32} />}
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}

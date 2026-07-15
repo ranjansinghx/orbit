@@ -223,7 +223,7 @@ export default function SettingsModal() {
                   aria-label="Change profile photo"
                 >
                   <Avatar
-                    src={avatarUrl || `https://i.pravatar.cc/150?u=${userId}`}
+                    src={avatarUrl}
                     alt={displayName}
                     size={64}
                   />
@@ -407,7 +407,7 @@ export default function SettingsModal() {
               ) : (
                 blocked.map((b) => (
                   <div key={b.id} className="flex items-center gap-3 py-2.5">
-                    <Avatar src={b.avatar_url || `https://i.pravatar.cc/150?u=${b.id}`} alt={b.display_name} size={38} />
+                    <Avatar src={b.avatar_url} alt={b.display_name} size={38} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{b.display_name}</p>
                       <p className="text-xs text-muted truncate">@{b.username}</p>

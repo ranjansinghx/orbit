@@ -53,7 +53,7 @@ function NotificationRow({ n, actorId, postId }: { n: any; actorId: string; post
       )}
     >
       <div className="relative shrink-0">
-        <Avatar src={actor.avatar_url || `https://i.pravatar.cc/150?u=${actor.id}`} alt={actor.display_name} size={44} />
+        <Avatar src={actor.avatar_url} alt={actor.display_name} size={44} />
         <span className="absolute -bottom-1 -right-1 bg-surface2 rounded-full p-1 border border-line">
           <NotificationIcon type={n.type} />
         </span>

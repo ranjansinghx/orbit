@@ -22,7 +22,7 @@ export default function SuggestedFollows() {
             className="shrink-0 w-32 flex flex-col items-center gap-2 border border-line rounded-xl px-3 py-4"
           >
             <Link href={`/profile/${p.username}`}>
-              <Avatar src={p.avatar_url || `https://i.pravatar.cc/150?u=${p.id}`} alt={p.display_name} size={52} />
+              <Avatar src={p.avatar_url} alt={p.display_name} size={52} />
             </Link>
             <Link href={`/profile/${p.username}`} className="text-center min-w-0">
               <p className="text-sm font-semibold truncate w-full">{p.display_name}</p>

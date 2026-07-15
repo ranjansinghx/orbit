@@ -45,7 +45,7 @@ export default function BottomTabs() {
             >
               {item.key === "profile" && profile ? (
                 <Avatar
-                  src={profile.avatar_url || `https://i.pravatar.cc/150?u=${profile.id}`}
+                  src={profile.avatar_url}
                   alt={profile.display_name}
                   size={26}
                   ring={active}

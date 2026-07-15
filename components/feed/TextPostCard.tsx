@@ -86,7 +86,7 @@ export default function TextPostCard({
       )}
       <div className="flex gap-3">
         <Avatar
-          src={author.avatar_url || `https://i.pravatar.cc/150?u=${author.id}`}
+          src={author.avatar_url}
           alt={author.display_name}
           size={42}
           className="mt-0.5"
