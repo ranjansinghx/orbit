@@ -17,6 +17,8 @@ export interface Database {
           avatar_url: string;
           bio: string;
           created_at: string;
+          is_admin: boolean;
+          onboarded: boolean;
         };
         Insert: Partial<Database["public"]["Tables"]["profiles"]["Row"]> & { id: string; username: string };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Row"]>;
@@ -164,7 +166,7 @@ export interface Database {
           reason: string;
           details?: string | null;
         };
-        Update: never;
+        Update: { status?: string };
       };
       reposts: {
         Row: { user_id: string; post_id: string; created_at: string };

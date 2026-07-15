@@ -121,7 +121,7 @@ export async function markNotificationsRead(myUserId: string) {
 
 export async function updateProfile(
   userId: string,
-  patch: Partial<{ display_name: string; bio: string; avatar_url: string; username: string }>
+  patch: Partial<{ display_name: string; bio: string; avatar_url: string; username: string; onboarded: boolean }>
 ) {
   const supabase = createClient();
   const { error } = await supabase.from("profiles").update(patch).eq("id", userId);
@@ -129,6 +129,17 @@ export async function updateProfile(
 }
 
 export async function signOut() {
+  const supabase = createClient();
+  await supabase.auth.signOut();
+  window.location.href = "/login";
+}
+
+export async function deleteAccount() {
+  const res = await fetch("/api/account/delete", { method: "POST" });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Couldn't delete account");
+  }
   const supabase = createClient();
   await supabase.auth.signOut();
   window.location.href = "/login";
@@ -148,6 +159,12 @@ export async function updateNotificationPreferences(
   const { error } = await supabase
     .from("notification_preferences")
     .upsert({ user_id: userId, ...patch }, { onConflict: "user_id" });
+  if (error) throw error;
+}
+
+export async function updateReportStatus(reportId: string, status: "open" | "reviewed" | "dismissed") {
+  const supabase = createClient();
+  const { error } = await supabase.from("reports").update({ status }).eq("id", reportId);
   if (error) throw error;
 }
 

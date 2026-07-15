@@ -226,6 +226,31 @@ export function useDrafts(userId: string | null | undefined) {
   return { drafts: data ?? [], mutate };
 }
 
+export interface ReportRow {
+  id: string;
+  reporter_id: string;
+  target_type: "post" | "user";
+  target_id: string;
+  reason: string;
+  details: string | null;
+  created_at: string;
+  status: string;
+}
+
+/** Admin-only — RLS on the reports table only lets is_admin accounts SELECT. */
+export function useReports(isAdmin: boolean | undefined) {
+  const supabase = createClient();
+  const { data, mutate } = useSWR(isAdmin ? ["reports"] : null, async () => {
+    const { data, error } = await supabase
+      .from("reports")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return data as ReportRow[];
+  });
+  return { reports: data ?? [], mutate };
+}
+
 export function useProfileById(id: string | undefined) {
   const supabase = createClient();
   const { data } = useSWR(id ? ["profile-by-id", id] : null, async () => {

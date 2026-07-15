@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useUIStore } from "@/lib/store/useUIStore";
 import { useThemeStore } from "@/lib/store/useThemeStore";
 import { useCurrentProfile } from "@/lib/supabase/useAuth";
 import { useBlockedProfiles, useNotificationPreferences } from "@/lib/supabase/hooks";
-import { updateProfile, signOut, toggleBlock, changePassword, updateNotificationPreferences } from "@/lib/supabase/actions";
+import { updateProfile, signOut, deleteAccount, toggleBlock, changePassword, updateNotificationPreferences } from "@/lib/supabase/actions";
 import { uploadMedia } from "@/lib/supabase/upload";
 import { isPushSupported, getPushPermissionState, enablePush, disablePush } from "@/lib/push";
 import Avatar from "@/components/Avatar";
@@ -22,6 +23,9 @@ export default function SettingsModal() {
   const router = useRouter();
 
   const [displayName, setDisplayName] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
   const [saving, setSaving] = useState(false);
@@ -135,6 +139,19 @@ export default function SettingsModal() {
     } finally {
       setUploadingAvatar(false);
       if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
+  }
+
+  async function handleDeleteAccount() {
+    if (deleteConfirmText !== "DELETE") return;
+    setDeletingAccount(true);
+    try {
+      await deleteAccount();
+      // deleteAccount() redirects to /login itself on success
+    } catch (err: any) {
+      console.error(err);
+      showToast(err?.message ?? "Couldn't delete account — try again");
+      setDeletingAccount(false);
     }
   }
 
@@ -294,6 +311,54 @@ export default function SettingsModal() {
               <button onClick={signOut} className="text-danger text-sm font-medium text-left mt-2">
                 Log out
               </button>
+
+              {profile.is_admin && (
+                <Link href="/admin/reports" onClick={close} className="text-sm text-text font-medium hover:underline">
+                  Review reports →
+                </Link>
+              )}
+
+              <div className="border-t border-line pt-4 mt-1">
+                {!showDeleteConfirm ? (
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="text-danger text-sm font-medium"
+                  >
+                    Delete account
+                  </button>
+                ) : (
+                  <div className="flex flex-col gap-2.5 border border-danger/40 bg-danger/5 rounded-lg p-3.5">
+                    <p className="text-sm text-paper/90">
+                      This permanently deletes your account, posts, messages, and everything else.
+                      There&apos;s no undo. Type <b>DELETE</b> to confirm.
+                    </p>
+                    <input
+                      value={deleteConfirmText}
+                      onChange={(e) => setDeleteConfirmText(e.target.value)}
+                      placeholder="DELETE"
+                      className="bg-surface2 border border-line rounded-lg px-3 py-2 text-sm outline-none focus:border-danger"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setShowDeleteConfirm(false);
+                          setDeleteConfirmText("");
+                        }}
+                        className="flex-1 py-2 rounded-full border border-line text-sm"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleDeleteAccount}
+                        disabled={deleteConfirmText !== "DELETE" || deletingAccount}
+                        className="flex-1 py-2 rounded-full bg-danger text-paper text-sm font-semibold disabled:opacity-40"
+                      >
+                        {deletingAccount ? "Deleting..." : "Delete forever"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

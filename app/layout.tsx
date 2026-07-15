@@ -13,13 +13,32 @@ const fraunces = Fraunces({
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const jbmono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jbmono" });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
+  ? process.env.NEXT_PUBLIC_SITE_URL
+  : process.env.VERCEL_URL
+  ? `https://${process.env.VERCEL_URL}`
+  : "http://localhost:3000";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "Orbit",
   description: "Two feeds. One orbit. Video, photo, and text — unified.",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "Orbit",
+  },
+  openGraph: {
+    title: "Orbit",
+    description: "Two feeds. One orbit. Video, photo, and text — unified.",
+    images: ["/og-default.png"],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Orbit",
+    description: "Two feeds. One orbit. Video, photo, and text — unified.",
+    images: ["/og-default.png"],
   },
 };
 

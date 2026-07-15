@@ -33,6 +33,7 @@ value be used in the same transaction that created it):
 0008_reposts.sql
 0009_drafts.sql
 0010_push_subscriptions.sql
+0011_admin_and_onboarding.sql
 ```
 
 Paste each one in, run it, then move to the next. (If you prefer the CLI:
@@ -117,21 +118,47 @@ npm run build && npm start   # production build
   one piece I couldn't test end-to-end myself (no way to deploy an Edge
   Function or receive a real push from this environment) — the setup guide
   says exactly what to check if it doesn't fire.
+- **Forgot password**: full flow — request link on `/login`, land on
+  `/auth/reset-password` from the emailed link, set a new password.
+- **Delete account**: a server-side route (`app/api/account/delete`) using
+  the service role key to actually delete the auth user and their uploaded
+  media — everything else cascades via the FK constraints already in the
+  schema. Requires typing "DELETE" to confirm in Settings.
+- **Reports are reviewable**: an `is_admin` flag on profiles, enforced via
+  RLS (not just hidden in the UI), gates `/admin/reports` — a list of
+  filed reports with reason, reporter, a link to the target, and
+  reviewed/dismissed/reopen actions.
+- **Open Graph tags on shared posts**: the post detail route generates real
+  `<meta>` tags per post (title, caption excerpt, and the photo itself as
+  the preview image for photo posts) so pasting a post link elsewhere shows
+  an actual preview instead of a bare URL.
+- **New-user onboarding**: a two-step modal shown once, right after your
+  first sign-in — explains the Home/Text feed split, then suggests a few
+  accounts to follow so the Following feed isn't empty on day one. Existing
+  accounts were backfilled to skip it.
+
+## Account & admin setup
+
+- **Making yourself an admin** (needed to review reports at `/admin/reports`):
+  run this once in the SQL editor after signing up:
+  ```sql
+  update public.profiles set is_admin = true where username = 'your_username';
+  ```
+- **Account deletion** (`app/api/account/delete`) needs `SUPABASE_SERVICE_ROLE_KEY`
+  set as a server-only environment variable — see `.env.example`. Without it,
+  the "Delete account" button in Settings will fail with a 500.
+- **Forgot password** works out of the box once Supabase Auth's email
+  templates are configured (they are by default on a new project) — no
+  extra setup beyond the migrations.
 
 ## What's still a stub
 
-- **Rate limiting**: the spec asks for basic rate limiting on post creation and
-  likes. That's easiest to add at the edge — either Supabase Edge Functions in
-  front of writes, or a small Upstash Redis counter checked in `actions.ts`
-  before each mutation. Not wired up yet.
-- **Notification preferences**: the toggles in Settings are UI-only. Persist
-  them to a `notification_preferences` table and check them in the trigger
-  functions before inserting a notification row.
-- **Password change form**: the Settings modal has a placeholder tab; wire it to
-  `supabase.auth.updateUser({ password })`.
 - There's no seed/demo data anymore — the app now reflects exactly what's in
   your Supabase project. If you want a populated demo, insert a few `auth.users`
   via the Supabase dashboard (or Admin API) and some rows into `posts` for them.
+- Push notifications need the separate Edge Function + webhook setup in
+  `supabase/functions/send-push/README.md` — the in-app half works without
+  it, but nothing gets sent until that's deployed.
 
 ## Architecture
 
