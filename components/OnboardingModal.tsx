@@ -15,11 +15,19 @@ export default function OnboardingModal() {
   const { people } = useSuggestedFollows(userId, 6);
   const [step, setStep] = useState<"welcome" | "follow">("welcome");
   const [finishing, setFinishing] = useState(false);
+  const [dismissedLocally, setDismissedLocally] = useState(false);
 
-  // Only ever shows for a signed-in user whose profile has loaded and who
-  // hasn't completed it yet — never renders for existing accounts (they
-  // were backfilled to onboarded=true in the migration).
-  if (!profile || profile.onboarded) return null;
+  // Strict === false on purpose: if the onboarded column doesn't exist yet
+  // (migration not run) this reads as undefined, which must NOT trigger a
+  // full-screen modal that can never be dismissed. Fail safe, not blocking.
+  if (!profile || profile.onboarded !== false || dismissedLocally) return null;
+
+  // Always works, even if the database write below fails for any reason —
+  // nobody should ever be permanently stuck behind this modal.
+  function skip() {
+    setDismissedLocally(true);
+    if (userId) updateProfile(userId, { onboarded: true }).catch(() => {});
+  }
 
   async function finish() {
     if (!userId) return;
@@ -39,7 +47,13 @@ export default function OnboardingModal() {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 px-4 animate-fade-in">
-      <div className="w-full max-w-sm bg-surface border border-line rounded-2xl overflow-hidden animate-slide-up">
+      <div className="w-full max-w-sm bg-surface border border-line rounded-2xl overflow-hidden animate-slide-up relative">
+        <button
+          onClick={skip}
+          className="absolute top-3 right-3 text-xs text-muted hover:text-paper transition-colors z-10 px-2 py-1"
+        >
+          Skip
+        </button>
         {step === "welcome" ? (
           <div className="px-6 py-8 flex flex-col items-center text-center">
             <OrbitMark size={44} spin />
