@@ -69,7 +69,7 @@ export default function SidebarNav() {
           return (
             <li key={item.key}>
               {item.href === null ? (
-                <button onClick={openComposer} className={rowClasses}>
+                <button onClick={() => openComposer()} className={rowClasses}>
                   {inner}
                 </button>
               ) : (

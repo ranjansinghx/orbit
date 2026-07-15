@@ -9,17 +9,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: "#0A0A0F",
-        surface: "#14141C",
-        surface2: "#1B1B26",
-        line: "#26262F",
-        paper: "#F2F1EC",
-        muted: "#8A8A94",
-        video: "#FF5A36",
-        videoDim: "#B8492E",
-        text: "#35C7FF",
-        textDim: "#2B93B8",
-        danger: "#FF4D6D",
+        ink: "rgb(var(--color-ink) / <alpha-value>)",
+        surface: "rgb(var(--color-surface) / <alpha-value>)",
+        surface2: "rgb(var(--color-surface2) / <alpha-value>)",
+        line: "rgb(var(--color-line) / <alpha-value>)",
+        paper: "rgb(var(--color-paper) / <alpha-value>)",
+        muted: "rgb(var(--color-muted) / <alpha-value>)",
+        video: "rgb(var(--color-video) / <alpha-value>)",
+        videoDim: "rgb(var(--color-videoDim) / <alpha-value>)",
+        text: "rgb(var(--color-text) / <alpha-value>)",
+        textDim: "rgb(var(--color-textDim) / <alpha-value>)",
+        danger: "rgb(var(--color-danger) / <alpha-value>)",
       },
       fontFamily: {
         display: ["var(--font-fraunces)", "Georgia", "serif"],

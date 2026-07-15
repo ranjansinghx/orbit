@@ -3,10 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUIStore } from "@/lib/store/useUIStore";
+import { useThemeStore } from "@/lib/store/useThemeStore";
 import { useCurrentProfile } from "@/lib/supabase/useAuth";
 import { useBlockedProfiles, useNotificationPreferences } from "@/lib/supabase/hooks";
 import { updateProfile, signOut, toggleBlock, changePassword, updateNotificationPreferences } from "@/lib/supabase/actions";
 import { uploadMedia } from "@/lib/supabase/upload";
+import { isPushSupported, getPushPermissionState, enablePush, disablePush } from "@/lib/push";
 import Avatar from "@/components/Avatar";
 import { CloseIcon, ImageIcon } from "@/components/icons";
 
@@ -38,6 +40,39 @@ export default function SettingsModal() {
 
   const [tab, setTab] = useState<"profile" | "password" | "notifications" | "blocked">("profile");
   const { blocked, mutate: mutateBlocked } = useBlockedProfiles(userId);
+
+  const { theme, setTheme } = useThemeStore();
+
+  const [pushState, setPushState] = useState<"unsupported" | "default" | "granted" | "denied">("default");
+  const [pushBusy, setPushBusy] = useState(false);
+
+  useEffect(() => {
+    getPushPermissionState().then((state) => {
+      if (state === "unsupported") setPushState("unsupported");
+      else setPushState(state as "default" | "granted" | "denied");
+    });
+  }, []);
+
+  async function handlePushToggle() {
+    if (!userId) return;
+    setPushBusy(true);
+    try {
+      if (pushState === "granted") {
+        await disablePush();
+        setPushState("default");
+        showToast("Push notifications turned off");
+      } else {
+        await enablePush(userId);
+        setPushState("granted");
+        showToast("Push notifications turned on");
+      }
+    } catch (err: any) {
+      console.error(err);
+      showToast(err?.message ?? "Couldn't update push notifications");
+    } finally {
+      setPushBusy(false);
+    }
+  }
 
   useEffect(() => {
     if (profile) {
@@ -240,6 +275,22 @@ export default function SettingsModal() {
                   className="bg-surface2 border border-line rounded-lg px-3 py-2.5 outline-none resize-none focus:border-muted"
                 />
               </label>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs text-muted font-mono">Appearance</span>
+                <div className="flex gap-2">
+                  {(["dark", "light"] as const).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setTheme(t)}
+                      className={`flex-1 py-2 rounded-lg text-sm capitalize border transition-colors ${
+                        theme === t ? "border-text bg-text/10 text-text" : "border-line text-muted"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <button onClick={signOut} className="text-danger text-sm font-medium text-left mt-2">
                 Log out
               </button>
@@ -287,6 +338,31 @@ export default function SettingsModal() {
 
           {tab === "notifications" && (
             <div className="flex flex-col gap-4">
+              {pushState !== "unsupported" && (
+                <div className="flex items-center justify-between pb-3 border-b border-line">
+                  <div>
+                    <span className="text-sm block">Push notifications</span>
+                    <span className="text-xs text-muted">
+                      {pushState === "denied"
+                        ? "Blocked in your browser settings"
+                        : "Get notified even when Orbit isn't open"}
+                    </span>
+                  </div>
+                  <button
+                    onClick={handlePushToggle}
+                    disabled={pushBusy || pushState === "denied"}
+                    className={`w-11 h-6 rounded-full relative transition-colors disabled:opacity-40 shrink-0 ${
+                      pushState === "granted" ? "bg-text" : "bg-surface2 border border-line"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 w-5 h-5 rounded-full bg-paper transition-transform ${
+                        pushState === "granted" ? "translate-x-5" : "translate-x-0.5"
+                      }`}
+                    />
+                  </button>
+                </div>
+              )}
               {preferences ? (
                 (
                   [

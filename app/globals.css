@@ -2,23 +2,51 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-ink: 10 10 15;
+  --color-surface: 20 20 28;
+  --color-surface2: 27 27 38;
+  --color-line: 38 38 47;
+  --color-paper: 242 241 236;
+  --color-muted: 138 138 148;
+  --color-video: 255 90 54;
+  --color-videoDim: 184 73 46;
+  --color-text: 53 199 255;
+  --color-textDim: 43 147 184;
+  --color-danger: 255 77 109;
+}
+
+html.light {
+  --color-ink: 246 245 241;
+  --color-surface: 255 255 255;
+  --color-surface2: 238 237 231;
+  --color-line: 223 221 213;
+  --color-paper: 20 20 28;
+  --color-muted: 108 108 118;
+  --color-video: 224 74 40;
+  --color-videoDim: 184 73 46;
+  --color-text: 11 130 176;
+  --color-textDim: 8 100 138;
+  --color-danger: 214 39 79;
+}
+
 html,
 body {
   height: 100%;
-  background: #0a0a0f;
-  color: #f2f1ec;
+  background: rgb(var(--color-ink));
+  color: rgb(var(--color-paper));
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #26262f transparent;
+  scrollbar-color: rgb(var(--color-line)) transparent;
 }
 *::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 *::-webkit-scrollbar-thumb {
-  background: #26262f;
+  background: rgb(var(--color-line));
   border-radius: 4px;
 }
 
@@ -49,6 +77,6 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid #ff5a36;
+  outline: 2px solid rgb(var(--color-video));
   outline-offset: 2px;
 }

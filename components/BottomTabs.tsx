@@ -65,7 +65,7 @@ export default function BottomTabs() {
             <li key={item.key} className="flex-1">
               {item.href === null ? (
                 <button
-                  onClick={openComposer}
+                  onClick={() => openComposer()}
                   className="w-full flex items-center justify-center py-3"
                   aria-label="Create post"
                 >

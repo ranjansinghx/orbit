@@ -17,9 +17,12 @@ export interface FeedPost {
   like_count: number;
   comment_count: number;
   share_count: number;
+  repost_count: number;
   watch_time_ratio: number;
   liked_by_me: boolean;
+  reposted_by_me: boolean;
   hashtags: string[];
+  reposted_by?: string | null; // set on Following feed items that arrived via a repost
 }
 
 const PAGE_SIZE = 10;
@@ -33,9 +36,12 @@ async function hydratePosts(
   if (rows.length === 0) return [];
   const ids = rows.map((r) => r.id);
 
-  const [{ data: likedRows }, { data: tagRows }] = await Promise.all([
+  const [{ data: likedRows }, { data: repostedRows }, { data: tagRows }] = await Promise.all([
     viewerId
       ? supabase.from("likes").select("post_id").eq("user_id", viewerId).in("post_id", ids)
+      : Promise.resolve({ data: [] as { post_id: string }[] }),
+    viewerId
+      ? supabase.from("reposts").select("post_id").eq("user_id", viewerId).in("post_id", ids)
       : Promise.resolve({ data: [] as { post_id: string }[] }),
     supabase
       .from("post_hashtags")
@@ -44,6 +50,7 @@ async function hydratePosts(
   ]);
 
   const likedSet = new Set((likedRows ?? []).map((r) => r.post_id));
+  const repostedSet = new Set((repostedRows ?? []).map((r) => r.post_id));
   const tagMap = new Map<string, string[]>();
   (tagRows ?? []).forEach((r: any) => {
     const tag = r.hashtags?.tag;
@@ -56,6 +63,7 @@ async function hydratePosts(
   return rows.map((r) => ({
     ...r,
     liked_by_me: likedSet.has(r.id),
+    reposted_by_me: repostedSet.has(r.id),
     hashtags: tagMap.get(r.id) ?? [],
   }));
 }
@@ -87,7 +95,8 @@ export function useForYouFeed(viewerId: string | null | undefined) {
       return;
     }
     const hydrated = await hydratePosts(supabase, data, viewerId ?? null);
-    setPosts((prev) => [...prev, ...hydrated]);
+    const withDefaults = hydrated.map((p) => ({ ...p, repost_count: 0, reposted_by_me: false }));
+    setPosts((prev) => [...prev, ...withDefaults]);
     const last = data[data.length - 1];
     setCursor({ score: last.score, id: last.id });
     if (data.length < PAGE_SIZE) setDone(true);
@@ -114,27 +123,19 @@ export function useForYouFeed(viewerId: string | null | undefined) {
 export function useFollowingFeed(viewerId: string | null | undefined) {
   const supabase = createClient();
   const [posts, setPosts] = useState<FeedPost[]>([]);
-  const [cursor, setCursor] = useState<string | null>(null);
+  const [cursor, setCursor] = useState<{ ts: string; id: string } | null>(null);
   const [done, setDone] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
     if (!viewerId || loading || done) return;
     setLoading(true);
-    let query = supabase
-      .from("posts")
-      .select("*")
-      .eq("type", "text")
-      .in(
-        "author_id",
-        (
-          await supabase.from("follows").select("followee_id").eq("follower_id", viewerId)
-        ).data?.map((f) => f.followee_id) ?? []
-      )
-      .order("created_at", { ascending: false })
-      .limit(PAGE_SIZE);
-    if (cursor) query = query.lt("created_at", cursor);
-    const { data, error } = await query;
+    const { data, error } = await supabase.rpc("get_following_feed", {
+      p_viewer_id: viewerId,
+      p_cursor_ts: cursor?.ts ?? null,
+      p_cursor_id: cursor?.id ?? null,
+      p_limit: PAGE_SIZE,
+    });
     setLoading(false);
     if (error) {
       console.error(error);
@@ -145,8 +146,12 @@ export function useFollowingFeed(viewerId: string | null | undefined) {
       return;
     }
     const hydrated = await hydratePosts(supabase, data, viewerId);
-    setPosts((prev) => [...prev, ...hydrated]);
-    setCursor(data[data.length - 1].created_at);
+    // hydratePosts spreads the raw RPC row, which already includes
+    // reposted_by and effective_time — just carry them through.
+    const merged = hydrated.map((p, i) => ({ ...p, reposted_by: (data[i] as any).reposted_by as string | null }));
+    setPosts((prev) => [...prev, ...merged]);
+    const last = data[data.length - 1] as any;
+    setCursor({ ts: last.effective_time, id: last.id });
     if (data.length < PAGE_SIZE) setDone(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewerId, cursor, done, loading]);
@@ -191,6 +196,34 @@ export function useNotificationPreferences(userId: string | null | undefined) {
     } & NotificationPreferences;
   });
   return { preferences: data, mutate };
+}
+
+export function useLikers(postId: string | undefined) {
+  const supabase = createClient();
+  const { data } = useSWR(postId ? ["likers", postId] : null, async () => {
+    const { data, error } = await supabase
+      .from("likes")
+      .select("user_id, created_at, profiles(*)")
+      .eq("post_id", postId!)
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return (data ?? []).map((r: any) => r.profiles).filter(Boolean) as Profile[];
+  });
+  return { likers: data ?? [] };
+}
+
+export function useDrafts(userId: string | null | undefined) {
+  const supabase = createClient();
+  const { data, mutate } = useSWR(userId ? ["drafts", userId] : null, async () => {
+    const { data, error } = await supabase
+      .from("drafts")
+      .select("*")
+      .eq("user_id", userId!)
+      .order("updated_at", { ascending: false });
+    if (error) throw error;
+    return data;
+  });
+  return { drafts: data ?? [], mutate };
 }
 
 export function useProfileById(id: string | undefined) {

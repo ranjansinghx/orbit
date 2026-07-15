@@ -8,6 +8,7 @@ import CommentsSheet from "@/components/CommentsSheet";
 import SettingsModal from "@/components/SettingsModal";
 import EditPostModal from "@/components/EditPostModal";
 import ReportModal from "@/components/ReportModal";
+import LikersSheet from "@/components/LikersSheet";
 import Toast from "@/components/Toast";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -30,6 +31,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <SettingsModal />
       <EditPostModal />
       <ReportModal />
+      <LikersSheet />
       <Toast />
     </div>
   );

@@ -1,20 +1,30 @@
 "use client";
 
 import { create } from "zustand";
+import { PostType } from "@/lib/supabase/database.types";
 
 interface ReportTarget {
   type: "post" | "user";
   id: string;
 }
 
+export interface ComposerDraft {
+  id: string;
+  type: PostType;
+  caption: string;
+  mediaUrls: string[];
+}
+
 interface UIState {
   composerOpen: boolean;
+  composerDraft: ComposerDraft | null;
   commentsPostId: string | null;
   settingsOpen: boolean;
   editingPostId: string | null;
   reportTarget: ReportTarget | null;
+  likersPostId: string | null;
   toast: string | null;
-  openComposer: () => void;
+  openComposer: (draft?: ComposerDraft) => void;
   closeComposer: () => void;
   openComments: (postId: string) => void;
   closeComments: () => void;
@@ -24,18 +34,22 @@ interface UIState {
   closeEdit: () => void;
   openReport: (target: ReportTarget) => void;
   closeReport: () => void;
+  openLikers: (postId: string) => void;
+  closeLikers: () => void;
   showToast: (msg: string) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
   composerOpen: false,
+  composerDraft: null,
   commentsPostId: null,
   settingsOpen: false,
   editingPostId: null,
   reportTarget: null,
+  likersPostId: null,
   toast: null,
-  openComposer: () => set({ composerOpen: true }),
-  closeComposer: () => set({ composerOpen: false }),
+  openComposer: (draft) => set({ composerOpen: true, composerDraft: draft ?? null }),
+  closeComposer: () => set({ composerOpen: false, composerDraft: null }),
   openComments: (postId) => set({ commentsPostId: postId }),
   closeComments: () => set({ commentsPostId: null }),
   openSettings: () => set({ settingsOpen: true }),
@@ -44,6 +58,8 @@ export const useUIStore = create<UIState>((set) => ({
   closeEdit: () => set({ editingPostId: null }),
   openReport: (target) => set({ reportTarget: target }),
   closeReport: () => set({ reportTarget: null }),
+  openLikers: (postId) => set({ likersPostId: postId }),
+  closeLikers: () => set({ likersPostId: null }),
   showToast: (msg) => {
     set({ toast: msg });
     setTimeout(() => set((s) => (s.toast === msg ? { toast: null } : s)), 2200);

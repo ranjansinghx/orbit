@@ -25,6 +25,7 @@ export default function ForYouCard({
 }) {
   const author = useProfileById(post.author_id);
   const openComments = useUIStore((s) => s.openComments);
+  const openLikers = useUIStore((s) => s.openLikers);
   const showToast = useUIStore((s) => s.showToast);
 
   const { ref, inView } = useInView<HTMLDivElement>(0.65);
@@ -193,7 +194,15 @@ export default function ForYouCard({
       <div className="absolute right-3 bottom-24 md:bottom-16 flex flex-col items-center gap-5">
         <button onClick={handleLike} className="flex flex-col items-center gap-1 active:scale-90 transition-transform">
           <HeartIcon filled={post.liked_by_me} size={30} />
-          <span className="text-[11px] font-mono">{compactNumber(post.like_count)}</span>
+          <span
+            className="text-[11px] font-mono"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (post.like_count > 0) openLikers(post.id);
+            }}
+          >
+            {compactNumber(post.like_count)}
+          </span>
         </button>
         <button
           onClick={() => openComments(post.id)}

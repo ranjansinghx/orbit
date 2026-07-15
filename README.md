@@ -17,10 +17,26 @@ key from **Settings → API**.
 
 ### 2. Run the schema
 
-Open the **SQL Editor** in your Supabase dashboard, paste in the contents of
-`supabase/migrations/0001_init.sql`, and run it. This creates every table, RLS
-policy, trigger, the ranking function, and the `media` storage bucket in one
-shot. (If you prefer the CLI: `supabase link` then `supabase db push`.)
+Open the **SQL Editor** in your Supabase dashboard and run every file in
+`supabase/migrations/` **in order** (the numbering matters — a couple of
+them split a change across two files because Postgres won't let a new enum
+value be used in the same transaction that created it):
+
+```
+0001_init.sql
+0002_features.sql
+0003_watch_time.sql
+0004_preferences_and_reports.sql
+0005_mention_enum.sql
+0006_mentions.sql
+0007_repost_enum.sql
+0008_reposts.sql
+0009_drafts.sql
+0010_push_subscriptions.sql
+```
+
+Paste each one in, run it, then move to the next. (If you prefer the CLI:
+`supabase link` then `supabase db push` runs them all in order automatically.)
 
 ### 3. Enable Google OAuth (optional but in the spec)
 
@@ -35,6 +51,8 @@ cp .env.example .env.local
 ```
 
 Fill in `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+`NEXT_PUBLIC_VAPID_PUBLIC_KEY` is only needed for push notifications — see
+`supabase/functions/send-push/README.md`; everything else works without it.
 
 ### 5. Run it
 
@@ -77,6 +95,28 @@ npm run build && npm start   # production build
 - **Notifications**: fan out automatically via triggers — liking a post,
   commenting, following, and posting (to your followers) all insert
   notification rows server-side, so the client never has to remember to do it.
+- **@mentions**: `@username` in captions/comments links to their profile and
+  triggers a real notification, enforced server-side.
+- **Reposts**: a "share to your Following feed" action, distinct from the
+  copy-link Share button. The Following feed is server-ranked by a single
+  Postgres function (`get_following_feed`) that merges original posts and
+  reposts from people you follow into one cursor-paginated timeline.
+- **Who liked a post**: tap any like count to see the list.
+- **Draft posts**: save an in-progress post (including already-uploaded
+  media) and resume it later from the composer's Drafts view.
+- **PWA support**: installable on a phone or desktop like a native app
+  (`app/manifest.ts` + `public/sw.js`), with generated app icons.
+- **Light/dark mode**: a real toggle in Settings, backed by CSS custom
+  properties (not just a handful of `dark:` classes) so every existing
+  Tailwind color utility (`bg-ink`, `text-paper`, etc.) and every icon
+  automatically repaints for the current theme with no per-component work.
+- **Push notifications**: the app-side half (subscribing, a service worker
+  push handler) is wired up. Actually *sending* a push requires a small
+  Supabase Edge Function + a Database Webhook + VAPID keys — see
+  `supabase/functions/send-push/README.md` for the full setup. This is the
+  one piece I couldn't test end-to-end myself (no way to deploy an Edge
+  Function or receive a real push from this environment) — the setup guide
+  says exactly what to check if it doesn't fire.
 
 ## What's still a stub
 

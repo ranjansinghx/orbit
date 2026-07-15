@@ -1,5 +1,5 @@
 export type PostType = "video" | "photo" | "text";
-export type NotificationType = "like" | "comment" | "follow" | "new_post" | "mention";
+export type NotificationType = "like" | "comment" | "follow" | "new_post" | "mention" | "repost";
 
 export interface Database {
   public: {
@@ -40,6 +40,7 @@ export interface Database {
           share_count: number;
           watch_time_ratio: number;
           watch_sample_count: number;
+          repost_count: number;
         };
         Insert: {
           author_id: string;
@@ -118,7 +119,15 @@ export interface Database {
         Update: never;
       };
       notification_preferences: {
-        Row: { user_id: string; likes: boolean; comments: boolean; follows: boolean; new_post: boolean; mentions: boolean };
+        Row: {
+          user_id: string;
+          likes: boolean;
+          comments: boolean;
+          follows: boolean;
+          new_post: boolean;
+          mentions: boolean;
+          reposts: boolean;
+        };
         Insert: {
           user_id: string;
           likes?: boolean;
@@ -126,8 +135,16 @@ export interface Database {
           follows?: boolean;
           new_post?: boolean;
           mentions?: boolean;
+          reposts?: boolean;
         };
-        Update: Partial<{ likes: boolean; comments: boolean; follows: boolean; new_post: boolean; mentions: boolean }>;
+        Update: Partial<{
+          likes: boolean;
+          comments: boolean;
+          follows: boolean;
+          new_post: boolean;
+          mentions: boolean;
+          reposts: boolean;
+        }>;
       };
       reports: {
         Row: {
@@ -149,6 +166,29 @@ export interface Database {
         };
         Update: never;
       };
+      reposts: {
+        Row: { user_id: string; post_id: string; created_at: string };
+        Insert: { user_id: string; post_id: string };
+        Update: never;
+      };
+      drafts: {
+        Row: {
+          id: string;
+          user_id: string;
+          type: PostType;
+          caption: string;
+          media_urls: string[];
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: { user_id: string; type: PostType; caption?: string; media_urls?: string[] };
+        Update: Partial<{ type: PostType; caption: string; media_urls: string[]; updated_at: string }>;
+      };
+      push_subscriptions: {
+        Row: { id: string; user_id: string; endpoint: string; p256dh: string; auth: string; created_at: string };
+        Insert: { user_id: string; endpoint: string; p256dh: string; auth: string };
+        Update: never;
+      };
     };
     Functions: {
       toggle_like: { Args: { p_post_id: string }; Returns: boolean };
@@ -159,6 +199,31 @@ export interface Database {
       increment_view_count: { Args: { p_post_id: string }; Returns: void };
       increment_share_count: { Args: { p_post_id: string }; Returns: void };
       get_or_create_conversation: { Args: { p_other_id: string }; Returns: string };
+      toggle_repost: { Args: { p_post_id: string }; Returns: boolean };
+      get_following_feed: {
+        Args: {
+          p_viewer_id: string;
+          p_cursor_ts?: string | null;
+          p_cursor_id?: string | null;
+          p_limit?: number;
+        };
+        Returns: {
+          id: string;
+          author_id: string;
+          type: PostType;
+          media_urls: string[];
+          caption: string;
+          created_at: string;
+          view_count: number;
+          like_count: number;
+          comment_count: number;
+          share_count: number;
+          repost_count: number;
+          watch_time_ratio: number;
+          effective_time: string;
+          reposted_by: string | null;
+        }[];
+      };
       get_for_you_feed: {
         Args: {
           p_viewer_id: string;

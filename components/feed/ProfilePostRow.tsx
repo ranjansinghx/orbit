@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { FeedPost, useProfileById } from "@/lib/supabase/hooks";
 import { useUIStore } from "@/lib/store/useUIStore";
-import { toggleLike, registerShare } from "@/lib/supabase/actions";
+import { toggleLike, registerShare, toggleRepost } from "@/lib/supabase/actions";
 import Avatar from "@/components/Avatar";
 import HashtagText from "@/components/HashtagText";
 import PostOptionsMenu from "@/components/PostOptionsMenu";
 import { compactNumber, timeAgo } from "@/lib/format";
-import { HeartIcon, CommentIcon, ShareIcon, VideoIcon } from "@/components/icons";
+import { HeartIcon, CommentIcon, ShareIcon, VideoIcon, RepostIcon } from "@/components/icons";
 
 /** One row in a profile's unified post list — works for text, photo, and video posts alike. */
 export default function ProfilePostRow({
@@ -24,6 +24,7 @@ export default function ProfilePostRow({
 }) {
   const author = useProfileById(post.author_id);
   const openComments = useUIStore((s) => s.openComments);
+  const openLikers = useUIStore((s) => s.openLikers);
   const showToast = useUIStore((s) => s.showToast);
 
   if (!author) return null;
@@ -39,6 +40,26 @@ export default function ProfilePostRow({
       console.error(err);
       onPatch?.(post.id, { liked_by_me: wasLiked, like_count: post.like_count });
     }
+  }
+
+  async function handleRepost(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    const was = post.reposted_by_me;
+    onPatch?.(post.id, { reposted_by_me: !was, repost_count: post.repost_count + (was ? -1 : 1) });
+    try {
+      const nowReposted = await toggleRepost(post.id);
+      showToast(nowReposted ? "Reposted to your Following feed" : "Repost removed");
+    } catch (err) {
+      console.error(err);
+      onPatch?.(post.id, { reposted_by_me: was, repost_count: post.repost_count });
+    }
+  }
+
+  function handleShowLikers(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (post.like_count > 0) openLikers(post.id);
   }
 
   async function handleShare(e: React.MouseEvent) {
@@ -93,7 +114,7 @@ export default function ProfilePostRow({
           </div>
         )}
 
-        <div className="flex items-center gap-8 mt-3 max-w-xs">
+        <div className="flex items-center gap-6 mt-3 max-w-md">
           <button
             onClick={(e) => {
               e.preventDefault();
@@ -105,9 +126,22 @@ export default function ProfilePostRow({
             <CommentIcon size={17} />
             <span className="text-xs font-mono">{compactNumber(post.comment_count)}</span>
           </button>
+          {post.type === "text" && (
+            <button
+              onClick={handleRepost}
+              className={`flex items-center gap-1.5 transition-colors ${
+                post.reposted_by_me ? "text-text" : "text-muted hover:text-text"
+              }`}
+            >
+              <RepostIcon active={post.reposted_by_me} size={17} />
+              <span className="text-xs font-mono">{compactNumber(post.repost_count)}</span>
+            </button>
+          )}
           <button onClick={handleLike} className="flex items-center gap-1.5 text-muted hover:text-video transition-colors">
             <HeartIcon filled={post.liked_by_me} size={17} />
-            <span className="text-xs font-mono">{compactNumber(post.like_count)}</span>
+            <span className="text-xs font-mono" onClick={handleShowLikers}>
+              {compactNumber(post.like_count)}
+            </span>
           </button>
           <button onClick={handleShare} className="flex items-center gap-1.5 text-muted hover:text-paper transition-colors">
             <ShareIcon size={16} />

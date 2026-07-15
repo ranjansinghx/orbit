@@ -5,13 +5,13 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCurrentProfile } from "@/lib/supabase/useAuth";
 import { usePost, useComments, useProfileById, useProfilesMap } from "@/lib/supabase/hooks";
-import { toggleLike, addComment, registerShare, deleteComment } from "@/lib/supabase/actions";
+import { toggleLike, addComment, registerShare, deleteComment, toggleRepost } from "@/lib/supabase/actions";
 import { useUIStore } from "@/lib/store/useUIStore";
 import Avatar from "@/components/Avatar";
 import FollowButton from "@/components/FollowButton";
 import HashtagText from "@/components/HashtagText";
 import PostOptionsMenu from "@/components/PostOptionsMenu";
-import { HeartIcon, CommentIcon, ShareIcon, SendIcon, TrashIcon } from "@/components/icons";
+import { HeartIcon, CommentIcon, ShareIcon, SendIcon, TrashIcon, RepostIcon } from "@/components/icons";
 import { compactNumber, timeAgo } from "@/lib/format";
 
 export default function PostDetailPage() {
@@ -23,6 +23,7 @@ export default function PostDetailPage() {
   const { comments, mutate: mutateComments } = useComments(params.id);
   const commentAuthors = useProfilesMap(comments.map((c) => c.author_id));
   const showToast = useUIStore((s) => s.showToast);
+  const openLikers = useUIStore((s) => s.openLikers);
   const [draft, setDraft] = useState("");
   const [posting, setPosting] = useState(false);
 
@@ -57,6 +58,21 @@ export default function PostDetailPage() {
     showToast("Link copied");
     registerShare(post!.id).catch(() => {});
     mutatePost();
+  }
+
+  async function handleRepost() {
+    const was = post!.reposted_by_me;
+    mutatePost(
+      { ...post!, reposted_by_me: !was, repost_count: post!.repost_count + (was ? -1 : 1) },
+      { revalidate: false }
+    );
+    try {
+      const nowReposted = await toggleRepost(post!.id);
+      showToast(nowReposted ? "Reposted to your Following feed" : "Repost removed");
+    } catch (err) {
+      console.error(err);
+      mutatePost();
+    }
   }
 
   async function submitComment() {
@@ -115,8 +131,28 @@ export default function PostDetailPage() {
         <div className="flex items-center gap-8 mt-4">
           <button onClick={handleLike} className="flex items-center gap-2 text-muted hover:text-video transition-colors">
             <HeartIcon filled={post.liked_by_me} size={22} />
-            <span className="text-sm font-mono">{compactNumber(post.like_count)}</span>
+            <span
+              className="text-sm font-mono"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (post.like_count > 0) openLikers(post.id);
+              }}
+            >
+              {compactNumber(post.like_count)}
+            </span>
           </button>
+          {post.type === "text" && (
+            <button
+              onClick={handleRepost}
+              className={`flex items-center gap-2 transition-colors ${
+                post.reposted_by_me ? "text-text" : "text-muted hover:text-text"
+              }`}
+            >
+              <RepostIcon active={post.reposted_by_me} size={20} />
+              <span className="text-sm font-mono">{compactNumber(post.repost_count)}</span>
+            </button>
+          )}
           <div className="flex items-center gap-2 text-muted">
             <CommentIcon size={21} />
             <span className="text-sm font-mono">{compactNumber(post.comment_count)}</span>

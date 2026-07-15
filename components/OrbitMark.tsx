@@ -9,9 +9,9 @@ export default function OrbitMark({ size = 28, spin = false }: { size?: number; 
       className={spin ? "animate-orbit-spin" : ""}
       aria-hidden="true"
     >
-      <circle cx="16" cy="20" r="11.5" stroke="#FF5A36" strokeWidth="2.4" />
-      <circle cx="24" cy="20" r="11.5" stroke="#35C7FF" strokeWidth="2.4" />
-      <circle cx="20" cy="20" r="2.2" fill="#F2F1EC" />
+      <circle cx="16" cy="20" r="11.5" stroke="rgb(var(--color-video))" strokeWidth="2.4" />
+      <circle cx="24" cy="20" r="11.5" stroke="rgb(var(--color-text))" strokeWidth="2.4" />
+      <circle cx="20" cy="20" r="2.2" fill="rgb(var(--color-paper))" />
     </svg>
   );
 }

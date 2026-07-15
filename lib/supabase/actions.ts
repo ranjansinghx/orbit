@@ -194,3 +194,72 @@ export async function toggleSave(postId: string) {
   if (error) throw error;
   return data as boolean; // true = now saved
 }
+
+export async function toggleRepost(postId: string) {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("toggle_repost", { p_post_id: postId });
+  if (error) throw error;
+  return data as boolean; // true = now reposted
+}
+
+export async function saveDraft(input: {
+  id?: string;
+  userId: string;
+  type: PostType;
+  caption: string;
+  mediaUrls: string[];
+}) {
+  const supabase = createClient();
+  if (input.id) {
+    const { error } = await supabase
+      .from("drafts")
+      .update({
+        type: input.type,
+        caption: input.caption,
+        media_urls: input.mediaUrls,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", input.id);
+    if (error) throw error;
+    return input.id;
+  }
+  const { data, error } = await supabase
+    .from("drafts")
+    .insert({
+      user_id: input.userId,
+      type: input.type,
+      caption: input.caption,
+      media_urls: input.mediaUrls,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id as string;
+}
+
+export async function deleteDraft(draftId: string) {
+  const supabase = createClient();
+  const { error } = await supabase.from("drafts").delete().eq("id", draftId);
+  if (error) throw error;
+}
+
+export async function savePushSubscription(userId: string, sub: PushSubscription) {
+  const supabase = createClient();
+  const json = sub.toJSON();
+  const { error } = await supabase.from("push_subscriptions").upsert(
+    {
+      user_id: userId,
+      endpoint: json.endpoint!,
+      p256dh: json.keys!.p256dh,
+      auth: json.keys!.auth,
+    },
+    { onConflict: "endpoint" }
+  );
+  if (error) throw error;
+}
+
+export async function removePushSubscription(endpoint: string) {
+  const supabase = createClient();
+  const { error } = await supabase.from("push_subscriptions").delete().eq("endpoint", endpoint);
+  if (error) throw error;
+}
