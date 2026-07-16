@@ -2,7 +2,13 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    remotePatterns: [{ protocol: "https", hostname: "images.unsplash.com" }],
+    remotePatterns: [
+      { protocol: "https", hostname: "images.unsplash.com" },
+      // Supabase Storage — this is where uploaded avatars/post media
+      // actually live. Without this, next/image silently refuses to
+      // render any of it (broken image + alt text showing instead).
+      { protocol: "https", hostname: "*.supabase.co" },
+    ],
   },
 };
 
