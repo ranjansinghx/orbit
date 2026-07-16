@@ -99,12 +99,27 @@ export const NAV_ICONS: Record<string, (p: IconProps) => JSX.Element> = {
   profile: ProfileIcon,
 };
 
-export function HeartIcon({ filled, size = 22, className }: { filled?: boolean; size?: number; className?: string }) {
+export function HeartIcon({
+  filled,
+  active,
+  size = 22,
+  className,
+}: {
+  filled?: boolean;
+  active?: boolean;
+  size?: number;
+  className?: string;
+}) {
+  const strokeColor = filled
+    ? "rgb(var(--color-video))"
+    : active
+    ? "rgb(var(--color-paper))"
+    : "rgb(var(--color-muted))";
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? "rgb(var(--color-video))" : "none"} className={className}>
       <path
         d="M12 20s-7.2-4.4-9.5-9C1 7.5 3 4 6.7 4c2 0 3.5 1.2 4.3 2.6C11.8 5.2 13.3 4 15.3 4 19 4 21 7.5 19.5 11c-2.3 4.6-9.5 9-9.5 9Z"
-        stroke={filled ? "rgb(var(--color-video))" : "rgb(var(--color-paper))"}
+        stroke={strokeColor}
         strokeWidth="1.8"
         strokeLinejoin="round"
       />
@@ -269,12 +284,27 @@ export function VideoIcon({ size = 20 }: { size?: number }) {
   );
 }
 
-export function BookmarkIcon({ filled, size = 20, className }: { filled?: boolean; size?: number; className?: string }) {
+export function BookmarkIcon({
+  filled,
+  active,
+  size = 20,
+  className,
+}: {
+  filled?: boolean;
+  active?: boolean;
+  size?: number;
+  className?: string;
+}) {
+  const strokeColor = filled
+    ? "rgb(var(--color-text))"
+    : active
+    ? "rgb(var(--color-paper))"
+    : "rgb(var(--color-muted))";
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? "rgb(var(--color-text))" : "none"} className={className}>
       <path
         d="M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21l-6-4-6 4V4.5Z"
-        stroke={filled ? "rgb(var(--color-text))" : "rgb(var(--color-paper))"}
+        stroke={strokeColor}
         strokeWidth="1.7"
         strokeLinejoin="round"
       />
