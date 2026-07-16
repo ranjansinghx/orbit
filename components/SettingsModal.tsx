@@ -318,6 +318,14 @@ export default function SettingsModal() {
                 </Link>
               )}
 
+              <a
+                href="/api/account/export"
+                download
+                className="text-text text-sm font-medium hover:underline w-fit"
+              >
+                Download your data
+              </a>
+
               <div className="border-t border-line pt-4 mt-1">
                 {!showDeleteConfirm ? (
                   <button

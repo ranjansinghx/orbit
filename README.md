@@ -139,6 +139,29 @@ npm run build && npm start   # production build
 
 ## Account & admin setup
 
+- **Data export**: Settings → Profile → "Download your data" hits
+  `app/api/account/export`, no extra setup needed.
+- **Bot protection (Cloudflare Turnstile)**: optional. Get a site key from
+  the [Cloudflare Turnstile dashboard](https://dash.cloudflare.com/?to=/:account/turnstile)
+  (free — you don't need Cloudflare Pages/Workers, just the Turnstile
+  product), set `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, then in **Supabase →
+  Authentication → Settings**, enable "Captcha protection" and paste the
+  matching Turnstile *secret* key there. Without this env var set, the
+  widget just doesn't render and auth works exactly as before — it's fully
+  optional. **Important:** if you enable captcha protection in Supabase's
+  dashboard, it applies to every password-based auth call project-wide
+  (signup, signin, and password reset) — the login page already sends the
+  token on all three, so don't enable it there without deploying this code
+  first, or those flows will start failing.
+- **Analytics**: uses `@vercel/analytics`. Deploying to Vercel is enough for
+  the package to work, but you need to turn Analytics on for the project in
+  the Vercel dashboard (Project → Analytics tab) — it's a free tier, just
+  not on by default.
+- **Legal pages** (`/legal/terms`, `/legal/privacy`): scaffolding only, with
+  a visible on-page disclaimer. Read that disclaimer — this is not real
+  legal coverage, have an actual lawyer review before you rely on it.
+
+
 - **Making yourself an admin** (needed to review reports at `/admin/reports`):
   run this once in the SQL editor after signing up:
   ```sql

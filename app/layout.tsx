@@ -3,6 +3,7 @@ import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import AppShell from "@/components/AppShell";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
+import { Analytics } from "@vercel/analytics/react";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -72,6 +73,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="font-sans bg-ink text-paper antialiased">
         <ServiceWorkerRegistration />
         <AppShell>{children}</AppShell>
+        <Analytics />
       </body>
     </html>
   );

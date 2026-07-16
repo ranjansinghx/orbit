@@ -1,8 +1,10 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import OrbitMark from "@/components/OrbitMark";
+import TurnstileWidget, { TurnstileHandle } from "@/components/TurnstileWidget";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
@@ -28,6 +30,8 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [checkEmail, setCheckEmail] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | undefined>(undefined);
+  const turnstileRef = useRef<TurnstileHandle>(null);
 
   const supabase = createClient();
 
@@ -48,7 +52,11 @@ function LoginForm() {
     setLoading(true);
     try {
       if (mode === "signin") {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+          options: { captchaToken },
+        });
         if (error) {
           setError(error.message);
           return;
@@ -62,6 +70,7 @@ function LoginForm() {
           options: {
             data: { username },
             emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+            captchaToken,
           },
         });
         if (error) {
@@ -72,6 +81,7 @@ function LoginForm() {
       } else {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/auth/reset-password`,
+          captchaToken,
         });
         if (error) {
           setError(error.message);
@@ -81,6 +91,10 @@ function LoginForm() {
       }
     } finally {
       setLoading(false);
+      // Turnstile tokens are single-use — always get a fresh one for the
+      // next attempt, whether this one succeeded or failed.
+      setCaptchaToken(undefined);
+      turnstileRef.current?.reset();
     }
   }
 
@@ -200,9 +214,10 @@ function LoginForm() {
                 </button>
               )}
               {error && <p className="text-danger text-sm">{error}</p>}
+              <TurnstileWidget ref={turnstileRef} onToken={setCaptchaToken} onExpire={() => setCaptchaToken(undefined)} />
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || (!!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && !captchaToken)}
                 className="bg-paper text-ink font-semibold rounded-full py-2.5 mt-1 hover:opacity-90 transition-opacity disabled:opacity-50"
               >
                 {loading
@@ -229,6 +244,20 @@ function LoginForm() {
               >
                 {mode === "signin" ? "New to Orbit? Create an account" : "Already have an account? Sign in"}
               </button>
+            )}
+
+            {mode === "signup" && (
+              <p className="text-xs text-muted text-center mt-4">
+                By creating an account, you agree to Orbit&apos;s{" "}
+                <Link href="/legal/terms" className="underline hover:text-paper">
+                  Terms
+                </Link>{" "}
+                and{" "}
+                <Link href="/legal/privacy" className="underline hover:text-paper">
+                  Privacy Policy
+                </Link>
+                .
+              </p>
             )}
           </>
         )}
