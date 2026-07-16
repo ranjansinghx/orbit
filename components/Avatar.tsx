@@ -34,12 +34,9 @@ export default function Avatar({
           aria-label={alt}
           role="img"
         >
-          <rect width="40" height="40" fill="rgb(var(--color-surface2))" />
-          <circle cx="20" cy="16" r="6.5" fill="rgb(var(--color-muted))" />
-          <path
-            d="M6 36c1.6-8 7-12.5 14-12.5S32.4 28 34 36"
-            fill="rgb(var(--color-muted))"
-          />
+          <rect width="40" height="40" fill="#E4E4E2" />
+          <circle cx="20" cy="15.5" r="7" fill="#9B9B9B" />
+          <path d="M4 38c0-9.4 7.2-15 16-15s16 5.6 16 15" fill="#9B9B9B" />
         </svg>
       )}
     </div>
