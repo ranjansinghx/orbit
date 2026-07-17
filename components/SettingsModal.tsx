@@ -11,6 +11,7 @@ import { updateProfile, signOut, deleteAccount, toggleBlock, changePassword, upd
 import { uploadMedia } from "@/lib/supabase/upload";
 import { isPushSupported, getPushPermissionState, enablePush, disablePush } from "@/lib/push";
 import Avatar from "@/components/Avatar";
+import ToggleSwitch from "@/components/ToggleSwitch";
 import { CloseIcon, ImageIcon } from "@/components/icons";
 
 const USERNAME_PATTERN = /^[a-z0-9_.]{3,20}$/;
@@ -421,19 +422,11 @@ export default function SettingsModal() {
                         : "Get notified even when Orbit isn't open"}
                     </span>
                   </div>
-                  <button
-                    onClick={handlePushToggle}
+                  <ToggleSwitch
+                    on={pushState === "granted"}
+                    onToggle={handlePushToggle}
                     disabled={pushBusy || pushState === "denied"}
-                    className={`w-11 h-6 rounded-full relative transition-colors disabled:opacity-40 shrink-0 ${
-                      pushState === "granted" ? "bg-text" : "bg-surface2 border border-line"
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 w-5 h-5 rounded-full bg-paper transition-transform ${
-                        pushState === "granted" ? "translate-x-5" : "translate-x-0.5"
-                      }`}
-                    />
-                  </button>
+                  />
                 </div>
               )}
               {preferences ? (
@@ -448,19 +441,11 @@ export default function SettingsModal() {
                 ).map((row) => (
                   <div key={row.key} className="flex items-center justify-between">
                     <span className="text-sm">{row.label}</span>
-                    <button
-                      onClick={() => togglePref(row.key)}
+                    <ToggleSwitch
+                      on={!!preferences[row.key]}
+                      onToggle={() => togglePref(row.key)}
                       disabled={savingPrefs === row.key}
-                      className={`w-11 h-6 rounded-full relative transition-colors disabled:opacity-60 ${
-                        preferences[row.key] ? "bg-text" : "bg-surface2 border border-line"
-                      }`}
-                    >
-                      <span
-                        className={`absolute top-0.5 w-5 h-5 rounded-full bg-paper transition-transform ${
-                          preferences[row.key] ? "translate-x-5" : "translate-x-0.5"
-                        }`}
-                      />
-                    </button>
+                    />
                   </div>
                 ))
               ) : (
