@@ -19,8 +19,8 @@ export default function ToggleSwitch({
       }`}
     >
       <span
-        className={`absolute top-0.5 w-5 h-5 rounded-full bg-paper transition-transform duration-150 ${
-          on ? "translate-x-5" : "translate-x-0.5"
+        className={`absolute left-0.5 top-0.5 w-5 h-5 rounded-full bg-paper shadow-sm transition-transform duration-150 ${
+          on ? "translate-x-5" : "translate-x-0"
         }`}
       />
     </button>
