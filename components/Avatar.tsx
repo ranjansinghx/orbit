@@ -1,4 +1,6 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
 import clsx from "clsx";
 
 export default function Avatar({
@@ -14,6 +16,9 @@ export default function Avatar({
   ring?: boolean;
   className?: string;
 }) {
+  const [failed, setFailed] = useState(false);
+  const showImage = !!src && !failed;
+
   return (
     <div
       className={clsx(
@@ -23,8 +28,19 @@ export default function Avatar({
       )}
       style={{ width: size, height: size }}
     >
-      {src ? (
-        <Image src={src} alt={alt} fill sizes={`${size}px`} className="object-cover" />
+      {showImage ? (
+        // Plain <img>, not next/image — avoids depending on every media
+        // host being whitelisted in next.config.js's remotePatterns, which
+        // is exactly what broke this before. onError below is the real
+        // safety net: any load failure for any reason falls back to the
+        // default silhouette instead of ever showing broken-image alt text.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={src}
+          alt={alt}
+          className="w-full h-full object-cover"
+          onError={() => setFailed(true)}
+        />
       ) : (
         <svg
           viewBox="0 0 40 40"

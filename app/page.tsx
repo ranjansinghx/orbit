@@ -23,7 +23,7 @@ export default function HomePage() {
 
   return (
     <div className="relative">
-      <div className="fixed top-0 inset-x-0 z-30 flex items-center justify-between px-4 py-3 pointer-events-none">
+      <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between px-4 py-3 pointer-events-none">
         <div className="flex items-center gap-2 pointer-events-auto">
           <OrbitMark size={22} />
           <span className="font-display italic text-lg">Orbit</span>
