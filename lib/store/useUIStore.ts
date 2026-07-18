@@ -23,6 +23,8 @@ interface UIState {
   editingPostId: string | null;
   reportTarget: ReportTarget | null;
   likersPostId: string | null;
+  quoteRepostPostId: string | null;
+  newGroupOpen: boolean;
   toast: string | null;
   openComposer: (draft?: ComposerDraft) => void;
   closeComposer: () => void;
@@ -36,6 +38,10 @@ interface UIState {
   closeReport: () => void;
   openLikers: (postId: string) => void;
   closeLikers: () => void;
+  openQuoteRepost: (postId: string) => void;
+  closeQuoteRepost: () => void;
+  openNewGroup: () => void;
+  closeNewGroup: () => void;
   showToast: (msg: string) => void;
 }
 
@@ -47,6 +53,8 @@ export const useUIStore = create<UIState>((set) => ({
   editingPostId: null,
   reportTarget: null,
   likersPostId: null,
+  quoteRepostPostId: null,
+  newGroupOpen: false,
   toast: null,
   openComposer: (draft) => set({ composerOpen: true, composerDraft: draft ?? null }),
   closeComposer: () => set({ composerOpen: false, composerDraft: null }),
@@ -60,6 +68,10 @@ export const useUIStore = create<UIState>((set) => ({
   closeReport: () => set({ reportTarget: null }),
   openLikers: (postId) => set({ likersPostId: postId }),
   closeLikers: () => set({ likersPostId: null }),
+  openQuoteRepost: (postId) => set({ quoteRepostPostId: postId }),
+  closeQuoteRepost: () => set({ quoteRepostPostId: null }),
+  openNewGroup: () => set({ newGroupOpen: true }),
+  closeNewGroup: () => set({ newGroupOpen: false }),
   showToast: (msg) => {
     set({ toast: msg });
     setTimeout(() => set((s) => (s.toast === msg ? { toast: null } : s)), 2200);

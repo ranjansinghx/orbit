@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useCurrentProfile } from "@/lib/supabase/useAuth";
 import { useConversations, useProfilesMap } from "@/lib/supabase/hooks";
+import { useUIStore } from "@/lib/store/useUIStore";
 import PageHeader from "@/components/PageHeader";
 import Avatar from "@/components/Avatar";
+import { UsersIcon } from "@/components/icons";
 import { timeAgo } from "@/lib/format";
 import useSWR from "swr";
 import { createClient } from "@/lib/supabase/client";
@@ -39,30 +41,49 @@ function useLastMessages(conversationIds: string[], myId: string | null | undefi
 export default function MessagesPage() {
   const { userId } = useCurrentProfile();
   const { conversations } = useConversations(userId);
-  const otherIds = conversations.map((c) => (c.user_a_id === userId ? c.user_b_id : c.user_a_id));
+  const openNewGroup = useUIStore((s) => s.openNewGroup);
+  const otherIds = conversations.filter((c) => !c.is_group && c.other_user_id).map((c) => c.other_user_id!);
   const profiles = useProfilesMap(otherIds);
   const lastMessages = useLastMessages(conversations.map((c) => c.id), userId);
 
   return (
     <div className="max-w-2xl mx-auto border-x border-line min-h-screen">
-      <PageHeader title="Messages" />
+      <PageHeader
+        title="Messages"
+        right={
+          <button
+            onClick={openNewGroup}
+            className="p-2 rounded-full border border-line hover:border-muted transition-colors"
+            aria-label="New group"
+          >
+            <UsersIcon size={19} />
+          </button>
+        }
+      />
       {conversations.length === 0 && <p className="text-center text-muted py-16">No conversations yet.</p>}
       {conversations.map((c) => {
-        const otherId = c.user_a_id === userId ? c.user_b_id : c.user_a_id;
-        const other = profiles[otherId];
+        const other = c.is_group ? null : c.other_user_id ? profiles[c.other_user_id] : null;
         const info = lastMessages[c.id];
-        if (!other || !info?.last) return null;
+        if (!c.is_group && !other) return null;
+        if (!info?.last) return null;
         const { last, unread } = info;
+        const name = c.is_group ? c.title || `Group (${c.member_count})` : other!.display_name;
         return (
           <Link
             key={c.id}
             href={`/messages/${c.id}`}
             className="flex items-center gap-3 px-5 py-4 border-b border-line hover:bg-surface/40 transition-colors"
           >
-            <Avatar src={other.avatar_url} alt={other.display_name} size={50} />
+            {c.is_group ? (
+              <div className="w-[50px] h-[50px] rounded-full bg-surface2 border border-line flex items-center justify-center shrink-0">
+                <UsersIcon size={22} className="text-muted" />
+              </div>
+            ) : (
+              <Avatar src={other!.avatar_url} alt={other!.display_name} size={50} />
+            )}
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <p className="font-semibold truncate">{other.display_name}</p>
+                <p className="font-semibold truncate">{name}</p>
                 <span className="text-[11px] text-muted font-mono shrink-0 ml-2">{timeAgo(last.created_at)}</span>
               </div>
               <p className={`text-sm truncate ${unread > 0 ? "text-paper font-medium" : "text-muted"}`}>

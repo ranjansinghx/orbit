@@ -15,15 +15,22 @@ export async function toggleFollow(targetId: string) {
   return data as boolean; // true = now following
 }
 
-export async function addComment(postId: string, authorId: string, body: string) {
+export async function addComment(postId: string, authorId: string, body: string, parentCommentId?: string | null) {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("comments")
-    .insert({ post_id: postId, author_id: authorId, body })
+    .insert({ post_id: postId, author_id: authorId, body, parent_comment_id: parentCommentId ?? null })
     .select()
     .single();
   if (error) throw error;
   return data;
+}
+
+export async function toggleCommentLike(commentId: string) {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("toggle_comment_like", { p_comment_id: commentId });
+  if (error) throw error;
+  return data as boolean; // true = now liked
 }
 
 export async function createPost(input: {
@@ -212,11 +219,58 @@ export async function toggleSave(postId: string) {
   return data as boolean; // true = now saved
 }
 
-export async function toggleRepost(postId: string) {
+export async function toggleRepost(postId: string, quote?: string) {
   const supabase = createClient();
-  const { data, error } = await supabase.rpc("toggle_repost", { p_post_id: postId });
+  const { data, error } = await supabase.rpc("toggle_repost", { p_post_id: postId, p_quote: quote ?? null });
   if (error) throw error;
   return data as boolean; // true = now reposted
+}
+
+export async function toggleMute(targetId: string) {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("toggle_mute", { p_target_id: targetId });
+  if (error) throw error;
+  return data as boolean; // true = now muted
+}
+
+export async function setPinnedPost(postId: string | null) {
+  const supabase = createClient();
+  const { error } = await supabase.rpc("set_pinned_post", { p_post_id: postId });
+  if (error) throw error;
+}
+
+export async function acceptFollowRequest(followerId: string) {
+  const supabase = createClient();
+  const { error } = await supabase.rpc("accept_follow_request", { p_follower_id: followerId });
+  if (error) throw error;
+}
+
+export async function rejectFollowRequest(followerId: string) {
+  const supabase = createClient();
+  const { error } = await supabase.rpc("reject_follow_request", { p_follower_id: followerId });
+  if (error) throw error;
+}
+
+export async function setPrivateAccount(userId: string, isPrivate: boolean) {
+  const supabase = createClient();
+  const { error } = await supabase.from("profiles").update({ is_private: isPrivate }).eq("id", userId);
+  if (error) throw error;
+}
+
+export async function createGroupConversation(title: string | null, memberIds: string[]) {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("create_group_conversation", {
+    p_title: title,
+    p_member_ids: memberIds,
+  });
+  if (error) throw error;
+  return data as string; // conversation id
+}
+
+export async function leaveGroupConversation(conversationId: string) {
+  const supabase = createClient();
+  const { error } = await supabase.rpc("leave_group_conversation", { p_conversation_id: conversationId });
+  if (error) throw error;
 }
 
 export async function saveDraft(input: {

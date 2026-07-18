@@ -23,6 +23,8 @@ export interface FeedPost {
   reposted_by_me: boolean;
   hashtags: string[];
   reposted_by?: string | null; // set on Following feed items that arrived via a repost
+  quote?: string | null; // set on Following feed items that arrived via a quote-repost
+  edited_at?: string | null;
 }
 
 const PAGE_SIZE = 10;
@@ -147,8 +149,13 @@ export function useFollowingFeed(viewerId: string | null | undefined) {
     }
     const hydrated = await hydratePosts(supabase, data, viewerId);
     // hydratePosts spreads the raw RPC row, which already includes
-    // reposted_by and effective_time — just carry them through.
-    const merged = hydrated.map((p, i) => ({ ...p, reposted_by: (data[i] as any).reposted_by as string | null }));
+    // reposted_by, quote, edited_at, and effective_time — just carry them through.
+    const merged = hydrated.map((p, i) => ({
+      ...p,
+      reposted_by: (data[i] as any).reposted_by as string | null,
+      quote: (data[i] as any).quote as string | null,
+      edited_at: (data[i] as any).edited_at as string | null,
+    }));
     setPosts((prev) => [...prev, ...merged]);
     const last = data[data.length - 1] as any;
     setCursor({ ts: last.effective_time, id: last.id });
@@ -286,29 +293,56 @@ export function useFollowCounts(userId: string | null | undefined) {
   const supabase = createClient();
   const { data, mutate } = useSWR(userId ? ["follow-counts", userId] : null, async () => {
     const [{ count: followers }, { count: following }] = await Promise.all([
-      supabase.from("follows").select("*", { count: "exact", head: true }).eq("followee_id", userId!),
-      supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", userId!),
+      supabase.from("follows").select("*", { count: "exact", head: true }).eq("followee_id", userId!).eq("status", "accepted"),
+      supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", userId!).eq("status", "accepted"),
     ]);
     return { followers: followers ?? 0, following: following ?? 0 };
   });
   return { counts: data ?? { followers: 0, following: 0 }, mutate };
 }
 
-export function useIsFollowing(viewerId: string | null | undefined, targetId: string | undefined) {
+export type FollowRelationStatus = "none" | "pending" | "accepted";
+
+/** Whether the viewer follows a target, and whether that follow is pending (private account) or accepted. */
+export function useFollowStatus(viewerId: string | null | undefined, targetId: string | undefined) {
   const supabase = createClient();
   const { data, mutate } = useSWR(
-    viewerId && targetId ? ["is-following", viewerId, targetId] : null,
+    viewerId && targetId ? ["follow-status", viewerId, targetId] : null,
     async () => {
       const { data } = await supabase
         .from("follows")
-        .select("follower_id")
+        .select("status")
         .eq("follower_id", viewerId!)
         .eq("followee_id", targetId!)
         .maybeSingle();
-      return !!data;
+      return (data?.status ?? "none") as FollowRelationStatus;
     }
   );
-  return { isFollowing: !!data, mutate };
+  return { status: data ?? "none", mutate };
+}
+
+export interface PendingFollowRequest {
+  follower_id: string;
+  created_at: string;
+  profile: Profile;
+}
+
+/** Incoming follow requests awaiting approval — only meaningful for private accounts. */
+export function usePendingFollowRequests(myId: string | null | undefined) {
+  const supabase = createClient();
+  const { data, mutate } = useSWR(myId ? ["pending-follow-requests", myId] : null, async () => {
+    const { data, error } = await supabase
+      .from("follows")
+      .select("follower_id, created_at, profiles!follows_follower_id_fkey(*)")
+      .eq("followee_id", myId!)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return (data ?? [])
+      .map((r: any) => ({ follower_id: r.follower_id, created_at: r.created_at, profile: r.profiles as Profile }))
+      .filter((r) => r.profile) as PendingFollowRequest[];
+  });
+  return { requests: data ?? [], mutate };
 }
 
 export function useUserPosts(userId: string | null | undefined) {
@@ -336,16 +370,30 @@ export function usePost(postId: string | undefined, viewerId: string | null | un
   return { post: data, mutate };
 }
 
-export function useComments(postId: string | undefined) {
+export interface CommentRow {
+  id: string;
+  post_id: string;
+  author_id: string;
+  body: string;
+  created_at: string;
+  parent_comment_id: string | null;
+  reply_count: number;
+  like_count: number;
+  liked_by_me: boolean;
+}
+
+/** Top-level comments only (parent_comment_id is null) — replies load lazily per-thread via useCommentReplies. */
+export function useComments(postId: string | undefined, viewerId?: string | null) {
   const supabase = createClient();
-  const { data, mutate } = useSWR(postId ? ["comments", postId] : null, async () => {
+  const { data, mutate } = useSWR(postId ? ["comments", postId, viewerId ?? null] : null, async () => {
     const { data, error } = await supabase
       .from("comments")
       .select("*")
       .eq("post_id", postId!)
+      .is("parent_comment_id", null)
       .order("created_at", { ascending: false });
     if (error) throw error;
-    return data;
+    return (await hydrateCommentLikes(supabase, data ?? [], viewerId ?? null)) as CommentRow[];
   });
 
   useEffect(() => {
@@ -354,7 +402,12 @@ export function useComments(postId: string | undefined) {
       .channel(`comments-${postId}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "comments", filter: `post_id=eq.${postId}` },
+        { event: "*", schema: "public", table: "comments", filter: `post_id=eq.${postId}` },
+        () => mutate()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "comment_likes" },
         () => mutate()
       )
       .subscribe();
@@ -365,6 +418,32 @@ export function useComments(postId: string | undefined) {
   }, [postId]);
 
   return { comments: data ?? [], mutate };
+}
+
+/** Replies to one comment — fetched on demand when a thread is expanded. */
+export function useCommentReplies(commentId: string | undefined, viewerId?: string | null) {
+  const supabase = createClient();
+  const { data, mutate } = useSWR(commentId ? ["comment-replies", commentId, viewerId ?? null] : null, async () => {
+    const { data, error } = await supabase
+      .from("comments")
+      .select("*")
+      .eq("parent_comment_id", commentId!)
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    return (await hydrateCommentLikes(supabase, data ?? [], viewerId ?? null)) as CommentRow[];
+  });
+  return { replies: data ?? [], mutate };
+}
+
+async function hydrateCommentLikes(supabase: ReturnType<typeof createClient>, rows: any[], viewerId: string | null) {
+  if (rows.length === 0 || !viewerId) return rows.map((r) => ({ ...r, liked_by_me: false }));
+  const { data: likedRows } = await supabase
+    .from("comment_likes")
+    .select("comment_id")
+    .eq("user_id", viewerId)
+    .in("comment_id", rows.map((r) => r.id));
+  const likedSet = new Set((likedRows ?? []).map((r) => r.comment_id));
+  return rows.map((r) => ({ ...r, liked_by_me: likedSet.has(r.id) }));
 }
 
 export function useHashtagPosts(tag: string) {
@@ -422,16 +501,22 @@ export function useSuggestedFollows(viewerId: string | null | undefined, limit =
   return { people: data ?? [], mutate };
 }
 
+export interface ConversationSummary {
+  id: string;
+  is_group: boolean;
+  title: string | null;
+  last_message_at: string;
+  other_user_id: string | null; // set for 1:1 conversations
+  member_count: number;
+}
+
+/** Every conversation the caller is part of — 1:1 or group, via the get_my_conversations RPC. */
 export function useConversations(myId: string | null | undefined) {
   const supabase = createClient();
   const { data, mutate } = useSWR(myId ? ["conversations", myId] : null, async () => {
-    const { data, error } = await supabase
-      .from("conversations")
-      .select("*")
-      .or(`user_a_id.eq.${myId},user_b_id.eq.${myId}`)
-      .order("last_message_at", { ascending: false });
+    const { data, error } = await supabase.rpc("get_my_conversations");
     if (error) throw error;
-    return data;
+    return data as ConversationSummary[];
   });
 
   useEffect(() => {
@@ -439,6 +524,7 @@ export function useConversations(myId: string | null | undefined) {
     const channel = supabase
       .channel(`conversations-${myId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "conversations" }, () => mutate())
+      .on("postgres_changes", { event: "*", schema: "public", table: "conversation_participants" }, () => mutate())
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
@@ -447,6 +533,20 @@ export function useConversations(myId: string | null | undefined) {
   }, [myId]);
 
   return { conversations: data ?? [], mutate };
+}
+
+/** Member profiles of a group conversation (or a 1:1, though useProfileById is simpler for that case). */
+export function useConversationParticipants(conversationId: string | undefined) {
+  const supabase = createClient();
+  const { data, mutate } = useSWR(conversationId ? ["conversation-participants", conversationId] : null, async () => {
+    const { data, error } = await supabase
+      .from("conversation_participants")
+      .select("user_id, profiles(*)")
+      .eq("conversation_id", conversationId!);
+    if (error) throw error;
+    return (data ?? []).map((r: any) => r.profiles as Profile).filter(Boolean);
+  });
+  return { participants: data ?? [], mutate };
 }
 
 export function useMessages(conversationId: string | undefined) {
@@ -516,20 +616,21 @@ export function useNotifications(myId: string | null | undefined) {
 export function useUnreadCounts(myId: string | null | undefined) {
   const supabase = createClient();
   const { data, mutate } = useSWR(myId ? ["unread-counts", myId] : null, async () => {
-    const [{ count: notifs }, { data: convIds }] = await Promise.all([
+    const [{ count: notifs }, { data: convRows }] = await Promise.all([
       supabase
         .from("notifications")
         .select("*", { count: "exact", head: true })
         .eq("user_id", myId!)
         .is("read_at", null),
-      supabase.from("conversations").select("id").or(`user_a_id.eq.${myId},user_b_id.eq.${myId}`),
+      supabase.rpc("get_my_conversations"),
     ]);
     let unreadMessages = 0;
-    if (convIds && convIds.length) {
+    const convIds = ((convRows ?? []) as { id: string }[]).map((c) => c.id);
+    if (convIds.length) {
       const { count } = await supabase
         .from("messages")
         .select("*", { count: "exact", head: true })
-        .in("conversation_id", convIds.map((c) => c.id))
+        .in("conversation_id", convIds)
         .neq("sender_id", myId!)
         .is("read_at", null);
       unreadMessages = count ?? 0;
@@ -582,6 +683,36 @@ export function useBlockedIds(myId: string | null | undefined) {
     return new Set((data ?? []).map((b) => b.blocked_id));
   });
   return data ?? new Set<string>();
+}
+
+export function useIsMuted(viewerId: string | null | undefined, targetId: string | undefined) {
+  const supabase = createClient();
+  const { data, mutate } = useSWR(
+    viewerId && targetId ? ["is-muted", viewerId, targetId] : null,
+    async () => {
+      const { data } = await supabase
+        .from("mutes")
+        .select("user_id")
+        .eq("user_id", viewerId!)
+        .eq("muted_id", targetId!)
+        .maybeSingle();
+      return !!data;
+    }
+  );
+  return { isMuted: !!data, mutate };
+}
+
+export function useMutedProfiles(myId: string | null | undefined) {
+  const supabase = createClient();
+  const { data, mutate } = useSWR(myId ? ["muted-profiles", myId] : null, async () => {
+    const { data, error } = await supabase
+      .from("mutes")
+      .select("muted_id, profiles!mutes_muted_id_fkey(*)")
+      .eq("user_id", myId!);
+    if (error) throw error;
+    return (data ?? []).map((r: any) => r.profiles as Profile).filter(Boolean);
+  });
+  return { muted: data ?? [], mutate };
 }
 
 export function useBlockedProfiles(myId: string | null | undefined) {

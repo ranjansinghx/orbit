@@ -71,7 +71,36 @@ post something from the composer to see it show up.
 npm run build && npm start   # production build
 ```
 
-## What's real now
+## What's new: mute, threaded replies, quote-repost, pin, edited indicator, private accounts, group DMs
+
+Seven additions on top of the base app, all in `supabase/migrations/0012` through
+`0017` — run them in order, after `0011_admin_and_onboarding.sql`:
+
+- **Mute** (`0012_mutes.sql`) — silent and one-directional, unlike a block: a
+  muted account keeps following/being followed and is never notified; you just
+  stop seeing their posts and reposts in your own feeds. Available from the
+  `···` menu on anyone else's post.
+- **Threaded replies + comment likes** (`0013_comment_threads.sql`) — comments
+  can now reply to a comment, not just to the post, and each comment can be
+  liked independently. Top-level comments load eagerly; a thread's replies load
+  on demand when you tap "View N replies".
+- **Pinned post, "edited" indicator, quote-repost** (`0014_pin_edit_quote.sql`)
+  — pin one of your own posts to the top of your profile; editing a caption now
+  stamps `edited_at` and shows "· edited" next to the timestamp; reposting can
+  optionally carry a comment of its own (the `···` menu → "Quote repost" on
+  someone else's post).
+- **Private accounts + follow requests** (`0015_follow_request_enum.sql` +
+  `0016_private_accounts.sql`) — a private account's posts are hidden from
+  everyone except the author, their accepted followers, and admins (reviewing
+  reports), enforced at the RLS layer so every read path is covered
+  automatically. Following a private account creates a pending request instead
+  of following outright; manage incoming requests from Settings → Requests.
+- **Group DMs** (`0017_group_dms.sql`) — the "new group" icon on the Messages
+  page lets you start a conversation with 3+ people. 1:1 conversations are
+  completely unchanged; groups are a second shape of the same `conversations`
+  table, with membership tracked in a new `conversation_participants` table.
+
+
 
 - **Auth**: real Supabase Auth. Email/password sign-up + sign-in, Google OAuth,
   session cookies refreshed by `middleware.ts`, protected routes (anything

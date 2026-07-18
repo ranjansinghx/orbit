@@ -84,6 +84,11 @@ export default function TextPostCard({
           <span>Reposted by {reposter.display_name}</span>
         </div>
       )}
+      {post.quote && (
+        <div className="pl-11 -mb-0.5">
+          <p className="text-[15px] leading-relaxed">{post.quote}</p>
+        </div>
+      )}
       <div className="flex gap-3">
         <Avatar
           src={author.avatar_url}
@@ -97,6 +102,7 @@ export default function TextPostCard({
             <span className="text-muted truncate">@{author.username}</span>
             <span className="text-muted">·</span>
             <span className="text-muted font-mono text-xs">{timeAgo(post.created_at)}</span>
+            {post.edited_at && <span className="text-muted text-xs">· edited</span>}
             <span className="ml-auto shrink-0" onClick={(e) => e.preventDefault()}>
               <PostOptionsMenu postId={post.id} authorId={author.id} onDeleted={onDeleted} onUnsaved={onUnsaved} />
             </span>

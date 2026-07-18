@@ -2,11 +2,12 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { mutate as globalMutate } from "swr";
 import { useCurrentProfile } from "@/lib/supabase/useAuth";
-import { useIsSaved, useIsBlocked } from "@/lib/supabase/hooks";
-import { deletePost, toggleSave, toggleBlock } from "@/lib/supabase/actions";
+import { useIsSaved, useIsBlocked, useIsMuted, useProfileById } from "@/lib/supabase/hooks";
+import { deletePost, toggleSave, toggleBlock, toggleMute, setPinnedPost } from "@/lib/supabase/actions";
 import { useUIStore } from "@/lib/store/useUIStore";
-import { MoreIcon, TrashIcon, BookmarkIcon, BlockIcon, EditIcon, FlagIcon } from "@/components/icons";
+import { MoreIcon, TrashIcon, BookmarkIcon, BlockIcon, EditIcon, FlagIcon, MuteIcon, PinIcon, QuoteIcon } from "@/components/icons";
 
 export default function PostOptionsMenu({
   postId,
@@ -24,13 +25,17 @@ export default function PostOptionsMenu({
   const showToast = useUIStore((s) => s.showToast);
   const openEdit = useUIStore((s) => s.openEdit);
   const openReport = useUIStore((s) => s.openReport);
+  const openQuoteRepost = useUIStore((s) => s.openQuoteRepost);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   const { isSaved, mutate: mutateSaved } = useIsSaved(userId, postId);
   const { isBlocked, mutate: mutateBlocked } = useIsBlocked(userId, authorId);
+  const { isMuted, mutate: mutateMuted } = useIsMuted(userId, authorId);
+  const author = useProfileById(authorId);
 
   const isOwner = userId === authorId;
+  const isPinned = author?.pinned_post_id === postId;
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -86,7 +91,34 @@ export default function PostOptionsMenu({
     }
   }
 
-  return (
+  async function handleMute(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setOpen(false);
+    mutateMuted(!isMuted, { revalidate: false });
+    try {
+      await toggleMute(authorId);
+      showToast(isMuted ? "Unmuted" : "Muted — you won't see their posts, they won't be notified");
+    } catch (err) {
+      console.error(err);
+      mutateMuted(isMuted, { revalidate: false });
+    }
+  }
+
+  async function handlePin(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setOpen(false);
+    try {
+      await setPinnedPost(isPinned ? null : postId);
+      globalMutate(["profile-by-id", authorId]);
+      showToast(isPinned ? "Unpinned from your profile" : "Pinned to your profile");
+    } catch (err) {
+      console.error(err);
+      showToast("Couldn't update pin — try again");
+    }
+  }
+
     <div className="relative" ref={ref}>
       <button
         onClick={(e) => {
@@ -111,6 +143,13 @@ export default function PostOptionsMenu({
           {isOwner ? (
             <>
               <button
+                onClick={handlePin}
+                className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-left hover:bg-surface2 transition-colors"
+              >
+                <PinIcon size={16} filled={isPinned} />
+                {isPinned ? "Unpin from profile" : "Pin to profile"}
+              </button>
+              <button
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -132,6 +171,25 @@ export default function PostOptionsMenu({
             </>
           ) : (
             <>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setOpen(false);
+                  openQuoteRepost(postId);
+                }}
+                className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-left hover:bg-surface2 transition-colors"
+              >
+                <QuoteIcon size={16} />
+                Quote repost
+              </button>
+              <button
+                onClick={handleMute}
+                className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-left hover:bg-surface2 transition-colors"
+              >
+                <MuteIcon size={16} />
+                {isMuted ? "Unmute account" : "Mute account"}
+              </button>
               <button
                 onClick={(e) => {
                   e.preventDefault();

@@ -90,6 +90,7 @@ export default function ProfilePostRow({
           <span className="text-muted truncate">@{author.username}</span>
           <span className="text-muted">·</span>
           <span className="text-muted font-mono text-xs">{timeAgo(post.created_at)}</span>
+          {post.edited_at && <span className="text-muted text-xs">· edited</span>}
           <span className="ml-auto shrink-0 flex items-center gap-1" onClick={(e) => e.preventDefault()}>
             {post.type !== "text" && (
               <span className="text-muted">

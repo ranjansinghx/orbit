@@ -6,13 +6,24 @@ import Link from "next/link";
 import { useUIStore } from "@/lib/store/useUIStore";
 import { useThemeStore } from "@/lib/store/useThemeStore";
 import { useCurrentProfile } from "@/lib/supabase/useAuth";
-import { useBlockedProfiles, useNotificationPreferences } from "@/lib/supabase/hooks";
-import { updateProfile, signOut, deleteAccount, toggleBlock, changePassword, updateNotificationPreferences } from "@/lib/supabase/actions";
+import { useBlockedProfiles, useMutedProfiles, usePendingFollowRequests, useNotificationPreferences } from "@/lib/supabase/hooks";
+import {
+  updateProfile,
+  signOut,
+  deleteAccount,
+  toggleBlock,
+  toggleMute,
+  setPrivateAccount,
+  acceptFollowRequest,
+  rejectFollowRequest,
+  changePassword,
+  updateNotificationPreferences,
+} from "@/lib/supabase/actions";
 import { uploadMedia } from "@/lib/supabase/upload";
 import { isPushSupported, getPushPermissionState, enablePush, disablePush } from "@/lib/push";
 import Avatar from "@/components/Avatar";
 import ToggleSwitch from "@/components/ToggleSwitch";
-import { CloseIcon, ImageIcon } from "@/components/icons";
+import { CloseIcon, ImageIcon, LockIcon } from "@/components/icons";
 
 const USERNAME_PATTERN = /^[a-z0-9_.]{3,20}$/;
 
@@ -43,8 +54,11 @@ export default function SettingsModal() {
   const { preferences, mutate: mutatePrefs } = useNotificationPreferences(userId);
   const [savingPrefs, setSavingPrefs] = useState<string | null>(null);
 
-  const [tab, setTab] = useState<"profile" | "password" | "notifications" | "blocked">("profile");
+  const [tab, setTab] = useState<"profile" | "password" | "notifications" | "blocked" | "muted" | "requests">("profile");
   const { blocked, mutate: mutateBlocked } = useBlockedProfiles(userId);
+  const { muted, mutate: mutateMuted } = useMutedProfiles(userId);
+  const { requests: pendingRequests, mutate: mutateRequests } = usePendingFollowRequests(userId);
+  const [savingPrivacy, setSavingPrivacy] = useState(false);
 
   const { theme, setTheme } = useThemeStore();
 
@@ -196,6 +210,40 @@ export default function SettingsModal() {
     }
   }
 
+  async function handlePrivacyToggle() {
+    if (!profile || !userId) return;
+    const next = !profile.is_private;
+    setSavingPrivacy(true);
+    mutate({ ...profile, is_private: next }, { revalidate: false });
+    try {
+      await setPrivateAccount(userId, next);
+    } catch (err) {
+      console.error(err);
+      mutate({ ...profile, is_private: !next }, { revalidate: false });
+      showToast("Couldn't update — try again");
+    } finally {
+      setSavingPrivacy(false);
+    }
+  }
+
+  async function handleAcceptRequest(followerId: string) {
+    try {
+      await acceptFollowRequest(followerId);
+      mutateRequests();
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function handleRejectRequest(followerId: string) {
+    try {
+      await rejectFollowRequest(followerId);
+      mutateRequests();
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/70 animate-fade-in" onClick={close}>
       <div
@@ -209,16 +257,21 @@ export default function SettingsModal() {
           </button>
         </div>
 
-        <div className="flex gap-1 px-5 pt-4">
-          {(["profile", "password", "notifications", "blocked"] as const).map((t) => (
+        <div className="flex gap-1 px-5 pt-4 flex-wrap">
+          {(["profile", "password", "notifications", "blocked", "muted", "requests"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-3.5 py-1.5 rounded-full text-sm capitalize transition-colors ${
+              className={`px-3.5 py-1.5 rounded-full text-sm capitalize transition-colors relative ${
                 tab === t ? "bg-paper text-ink font-medium" : "text-muted"
               }`}
             >
               {t}
+              {t === "requests" && pendingRequests.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-danger text-paper text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+                  {pendingRequests.length}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -368,6 +421,16 @@ export default function SettingsModal() {
                   </div>
                 )}
               </div>
+              <div className="flex items-center justify-between border-t border-line pt-4">
+                <div className="flex items-center gap-2">
+                  <LockIcon size={16} className="text-muted" />
+                  <div>
+                    <span className="text-sm block">Private account</span>
+                    <span className="text-xs text-muted">Only approved followers see your posts</span>
+                  </div>
+                </div>
+                <ToggleSwitch on={!!profile.is_private} onToggle={handlePrivacyToggle} disabled={savingPrivacy} />
+              </div>
             </div>
           )}
 
@@ -482,6 +545,71 @@ export default function SettingsModal() {
                       className="px-3 py-1.5 rounded-full border border-line text-xs font-medium hover:border-muted transition-colors shrink-0"
                     >
                       Unblock
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {tab === "muted" && (
+            <div className="flex flex-col gap-1">
+              {muted.length === 0 ? (
+                <p className="text-sm text-muted">You haven&apos;t muted anyone.</p>
+              ) : (
+                muted.map((m) => (
+                  <div key={m.id} className="flex items-center gap-3 py-2.5">
+                    <Avatar src={m.avatar_url} alt={m.display_name} size={38} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{m.display_name}</p>
+                      <p className="text-xs text-muted truncate">@{m.username}</p>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await toggleMute(m.id);
+                          mutateMuted();
+                        } catch (err) {
+                          console.error(err);
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-full border border-line text-xs font-medium hover:border-muted transition-colors shrink-0"
+                    >
+                      Unmute
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {tab === "requests" && (
+            <div className="flex flex-col gap-1">
+              {!profile.is_private ? (
+                <p className="text-sm text-muted">
+                  Follow requests only apply to private accounts. Turn on Private account in the Profile tab to require approval.
+                </p>
+              ) : pendingRequests.length === 0 ? (
+                <p className="text-sm text-muted">No pending follow requests.</p>
+              ) : (
+                pendingRequests.map((r) => (
+                  <div key={r.follower_id} className="flex items-center gap-3 py-2.5">
+                    <Avatar src={r.profile.avatar_url} alt={r.profile.display_name} size={38} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{r.profile.display_name}</p>
+                      <p className="text-xs text-muted truncate">@{r.profile.username}</p>
+                    </div>
+                    <button
+                      onClick={() => handleRejectRequest(r.follower_id)}
+                      className="px-3 py-1.5 rounded-full border border-line text-xs font-medium hover:border-muted transition-colors shrink-0"
+                    >
+                      Decline
+                    </button>
+                    <button
+                      onClick={() => handleAcceptRequest(r.follower_id)}
+                      className="px-3 py-1.5 rounded-full bg-paper text-ink text-xs font-semibold shrink-0"
+                    >
+                      Accept
                     </button>
                   </div>
                 ))

@@ -4,14 +4,15 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCurrentProfile } from "@/lib/supabase/useAuth";
-import { usePost, useComments, useProfileById, useProfilesMap } from "@/lib/supabase/hooks";
-import { toggleLike, addComment, registerShare, deleteComment, toggleRepost } from "@/lib/supabase/actions";
+import { usePost, useComments, useProfileById, CommentRow } from "@/lib/supabase/hooks";
+import { toggleLike, addComment, registerShare, toggleRepost } from "@/lib/supabase/actions";
 import { useUIStore } from "@/lib/store/useUIStore";
 import Avatar from "@/components/Avatar";
 import FollowButton from "@/components/FollowButton";
 import HashtagText from "@/components/HashtagText";
 import PostOptionsMenu from "@/components/PostOptionsMenu";
-import { HeartIcon, CommentIcon, ShareIcon, SendIcon, TrashIcon, RepostIcon } from "@/components/icons";
+import CommentThread from "@/components/CommentThread";
+import { HeartIcon, CommentIcon, ShareIcon, SendIcon, RepostIcon } from "@/components/icons";
 import { compactNumber, timeAgo } from "@/lib/format";
 
 export default function PostDetailClient() {
@@ -20,12 +21,12 @@ export default function PostDetailClient() {
   const { userId, profile: me } = useCurrentProfile();
   const { post, mutate: mutatePost } = usePost(params.id, userId);
   const author = useProfileById(post?.author_id);
-  const { comments, mutate: mutateComments } = useComments(params.id);
-  const commentAuthors = useProfilesMap(comments.map((c) => c.author_id));
+  const { comments, mutate: mutateComments } = useComments(params.id, userId);
   const showToast = useUIStore((s) => s.showToast);
   const openLikers = useUIStore((s) => s.openLikers);
   const [draft, setDraft] = useState("");
   const [posting, setPosting] = useState(false);
+  const [replyTo, setReplyTo] = useState<CommentRow | null>(null);
 
   if (!post || !author) {
     return (
@@ -79,9 +80,11 @@ export default function PostDetailClient() {
     if (!draft.trim() || !userId) return;
     setPosting(true);
     const body = draft.trim();
+    const parentId = replyTo?.id ?? null;
     setDraft("");
+    setReplyTo(null);
     try {
-      await addComment(post!.id, userId, body);
+      await addComment(post!.id, userId, body, parentId);
       mutateComments();
       mutatePost();
     } finally {
@@ -125,7 +128,7 @@ export default function PostDetailClient() {
 
         <HashtagText text={post.caption} className="text-[15px] leading-relaxed block" />
         <p className="text-xs text-muted font-mono mt-2">
-          {timeAgo(post.created_at)} · {compactNumber(post.view_count)} views
+          {timeAgo(post.created_at)} · {compactNumber(post.view_count)} views{post.edited_at ? " · edited" : ""}
         </p>
 
         <div className="flex items-center gap-8 mt-4">
@@ -164,13 +167,23 @@ export default function PostDetailClient() {
         </div>
       </div>
 
+      {replyTo && (
+        <div className="flex items-center justify-between px-5 pt-2 text-xs text-muted border-b border-line pb-2 bg-surface2">
+          <span>
+            Replying to: <span className="text-text">{replyTo.body.length > 50 ? `${replyTo.body.slice(0, 50)}...` : replyTo.body}</span>
+          </span>
+          <button onClick={() => setReplyTo(null)} className="hover:text-text">
+            Cancel
+          </button>
+        </div>
+      )}
       <div className="flex items-center gap-3 px-5 py-3 border-b border-line">
         {me && <Avatar src={me.avatar_url} alt={me.display_name} size={34} />}
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && submitComment()}
-          placeholder="Add a comment..."
+          placeholder={replyTo ? "Write a reply..." : "Add a comment..."}
           className="flex-1 bg-surface2 rounded-full px-4 py-2 text-sm outline-none placeholder:text-muted border border-line focus:border-muted"
         />
         <button onClick={submitComment} disabled={!draft.trim() || posting} className="disabled:opacity-30" aria-label="Send comment">
@@ -178,44 +191,19 @@ export default function PostDetailClient() {
         </button>
       </div>
 
-      {comments.map((c) => {
-        const commentAuthor = commentAuthors[c.author_id];
-        if (!commentAuthor) return null;
-        return (
-          <div key={c.id} className="flex gap-3 px-5 py-3 border-b border-line">
-            <Avatar
-              src={commentAuthor.avatar_url}
-              alt={commentAuthor.display_name}
-              size={36}
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm">
-                <span className="font-semibold mr-1.5">{commentAuthor.username}</span>
-                <HashtagText text={c.body} />
-              </p>
-              <p className="text-[11px] text-muted font-mono mt-0.5">{timeAgo(c.created_at)}</p>
-            </div>
-            {c.author_id === userId && (
-              <button
-                onClick={async () => {
-                  if (!window.confirm("Delete this comment?")) return;
-                  try {
-                    await deleteComment(c.id);
-                    mutateComments();
-                    mutatePost();
-                  } catch (err) {
-                    console.error(err);
-                  }
-                }}
-                className="p-1 text-muted hover:text-danger transition-colors shrink-0 self-start"
-                aria-label="Delete comment"
-              >
-                <TrashIcon size={15} />
-              </button>
-            )}
-          </div>
-        );
-      })}
+      <div className="px-5 divide-y divide-line">
+        {comments.map((c) => (
+          <CommentThread
+            key={c.id}
+            comment={c}
+            onReply={(comment) => setReplyTo(comment)}
+            onChanged={() => {
+              mutateComments();
+              mutatePost();
+            }}
+          />
+        ))}
+      </div>
     </div>
   );
 }

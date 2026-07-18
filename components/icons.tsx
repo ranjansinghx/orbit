@@ -352,3 +352,84 @@ export function BlockIcon({ size = 17 }: { size?: number }) {
     </svg>
   );
 }
+
+export function MuteIcon({ size = 17 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path
+        d="M4 9v6h4l5 4V5L8 9H4Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M16 9l4.5 6M20.5 9L16 15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function PinIcon({ size = 16, filled, className }: { size?: number; filled?: boolean; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <path
+        d="M14.5 3.5 20.5 9.5l-2.2 2.2-1-.3-3.9 3.9L14 19l-1.4 1.4-4-4-4 4-1.4-1.4 4-4-4-4L4.6 9.6l3.7 1.6 3.9-3.9-.3-1L14.5 3.5Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+        fill={filled ? "currentColor" : "none"}
+      />
+    </svg>
+  );
+}
+
+export function LockIcon({ size = 14, className }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <rect x="5" y="10.5" width="14" height="9.5" rx="2" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function ReplyIcon({ size = 14, className }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <path
+        d="M9 6 3.5 11.5 9 17M4 11.5h9a6.5 6.5 0 0 1 6.5 6.5v.5"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function UsersIcon({ size = 20, className }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M3.5 19.5a5.5 5.5 0 0 1 11 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path
+        d="M16 8.5a2.7 2.7 0 1 0 0-5.4M17.5 14.2a5 5 0 0 1 3.5 4.8"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+export function QuoteIcon({ size = 16, className }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <path
+        d="M7 8.5c-2 0-3.2 1.5-3.2 3.4 0 1.8 1.3 3.1 3 3.1.3 2-1 3.6-2.8 4.3M15.5 8.5c-2 0-3.2 1.5-3.2 3.4 0 1.8 1.3 3.1 3 3.1.3 2-1 3.6-2.8 4.3"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

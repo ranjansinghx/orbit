@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useCurrentProfile } from "@/lib/supabase/useAuth";
 import { useNotifications, useProfilesMap, usePost } from "@/lib/supabase/hooks";
-import { markNotificationsRead } from "@/lib/supabase/actions";
+import { markNotificationsRead, acceptFollowRequest, rejectFollowRequest } from "@/lib/supabase/actions";
 import PageHeader from "@/components/PageHeader";
 import Avatar from "@/components/Avatar";
 import { timeAgo } from "@/lib/format";
-import { HeartIcon, CommentIcon, ProfileIcon, VideoIcon, AtIcon } from "@/components/icons";
+import { HeartIcon, CommentIcon, ProfileIcon, VideoIcon, AtIcon, RepostIcon, LockIcon } from "@/components/icons";
 import clsx from "clsx";
 
 function copyFor(type: string) {
@@ -19,10 +19,14 @@ function copyFor(type: string) {
       return "commented on your post";
     case "follow":
       return "started following you";
+    case "follow_request":
+      return "requested to follow you";
     case "new_post":
       return "shared a new post";
     case "mention":
       return "mentioned you";
+    case "repost":
+      return "reposted your post";
     default:
       return "";
   }
@@ -32,7 +36,9 @@ function NotificationIcon({ type }: { type: string }) {
   if (type === "like") return <HeartIcon filled size={18} />;
   if (type === "comment") return <CommentIcon size={18} />;
   if (type === "follow") return <ProfileIcon active size={18} />;
+  if (type === "follow_request") return <LockIcon size={15} />;
   if (type === "mention") return <AtIcon size={16} className="text-paper" />;
+  if (type === "repost") return <RepostIcon active size={16} />;
   return <VideoIcon size={18} />;
 }
 
@@ -40,9 +46,39 @@ function NotificationRow({ n, actorId, postId }: { n: any; actorId: string; post
   const actors = useProfilesMap([actorId]);
   const actor = actors[actorId];
   const { post } = usePost(postId ?? undefined, null);
+  const [resolved, setResolved] = useState<"accepted" | "rejected" | null>(null);
+  const [busy, setBusy] = useState(false);
 
   if (!actor) return null;
-  const href = n.type === "follow" ? `/profile/${actor.username}` : postId ? `/post/${postId}` : "#";
+  const href = n.type === "follow" || n.type === "follow_request" ? `/profile/${actor.username}` : postId ? `/post/${postId}` : "#";
+
+  async function handleAccept(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setBusy(true);
+    try {
+      await acceptFollowRequest(actorId);
+      setResolved("accepted");
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleReject(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setBusy(true);
+    try {
+      await rejectFollowRequest(actorId);
+      setResolved("rejected");
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <Link
@@ -65,6 +101,27 @@ function NotificationRow({ n, actorId, postId }: { n: any; actorId: string; post
           <span className="text-muted"> · {post.caption.slice(0, 40)}</span>
         )}
       </p>
+      {n.type === "follow_request" && !resolved && (
+        <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.preventDefault()}>
+          <button
+            onClick={handleReject}
+            disabled={busy}
+            className="px-3 py-1.5 rounded-full border border-line text-xs font-medium hover:border-muted transition-colors disabled:opacity-50"
+          >
+            Decline
+          </button>
+          <button
+            onClick={handleAccept}
+            disabled={busy}
+            className="px-3 py-1.5 rounded-full bg-paper text-ink text-xs font-semibold disabled:opacity-50"
+          >
+            Accept
+          </button>
+        </div>
+      )}
+      {n.type === "follow_request" && resolved && (
+        <span className="text-xs text-muted shrink-0">{resolved === "accepted" ? "Accepted" : "Declined"}</span>
+      )}
       {post && post.type === "photo" && post.media_urls[0] && (
         <img src={post.media_urls[0]} alt="" className="w-11 h-11 rounded-md object-cover shrink-0" />
       )}

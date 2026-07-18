@@ -1,5 +1,6 @@
 export type PostType = "video" | "photo" | "text";
-export type NotificationType = "like" | "comment" | "follow" | "new_post" | "mention" | "repost";
+export type NotificationType = "like" | "comment" | "follow" | "new_post" | "mention" | "repost" | "follow_request";
+export type FollowStatus = "pending" | "accepted";
 
 export interface Database {
   public: {
@@ -19,14 +20,16 @@ export interface Database {
           created_at: string;
           is_admin: boolean;
           onboarded: boolean;
+          is_private: boolean;
+          pinned_post_id: string | null;
         };
         Insert: Partial<Database["public"]["Tables"]["profiles"]["Row"]> & { id: string; username: string };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Row"]>;
       };
       follows: {
-        Row: { follower_id: string; followee_id: string; created_at: string };
-        Insert: { follower_id: string; followee_id: string };
-        Update: never;
+        Row: { follower_id: string; followee_id: string; created_at: string; status: FollowStatus };
+        Insert: { follower_id: string; followee_id: string; status?: FollowStatus };
+        Update: Partial<{ status: FollowStatus }>;
       };
       posts: {
         Row: {
@@ -43,6 +46,7 @@ export interface Database {
           watch_time_ratio: number;
           watch_sample_count: number;
           repost_count: number;
+          edited_at: string | null;
         };
         Insert: {
           author_id: string;
@@ -54,8 +58,32 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["posts"]["Row"]>;
       };
       comments: {
-        Row: { id: string; post_id: string; author_id: string; body: string; created_at: string };
-        Insert: { post_id: string; author_id: string; body: string };
+        Row: {
+          id: string;
+          post_id: string;
+          author_id: string;
+          body: string;
+          created_at: string;
+          parent_comment_id: string | null;
+          reply_count: number;
+          like_count: number;
+        };
+        Insert: { post_id: string; author_id: string; body: string; parent_comment_id?: string | null };
+        Update: never;
+      };
+      comment_likes: {
+        Row: { user_id: string; comment_id: string; created_at: string };
+        Insert: { user_id: string; comment_id: string };
+        Update: never;
+      };
+      mutes: {
+        Row: { user_id: string; muted_id: string; created_at: string };
+        Insert: { user_id: string; muted_id: string };
+        Update: never;
+      };
+      conversation_participants: {
+        Row: { conversation_id: string; user_id: string; joined_at: string };
+        Insert: { conversation_id: string; user_id: string };
         Update: never;
       };
       likes: {
@@ -64,9 +92,17 @@ export interface Database {
         Update: never;
       };
       conversations: {
-        Row: { id: string; user_a_id: string; user_b_id: string; last_message_at: string };
+        Row: {
+          id: string;
+          user_a_id: string;
+          user_b_id: string | null;
+          last_message_at: string;
+          is_group: boolean;
+          title: string | null;
+          created_by: string | null;
+        };
         Insert: { user_a_id: string; user_b_id: string };
-        Update: never;
+        Update: Partial<{ title: string | null }>;
       };
       messages: {
         Row: {
@@ -169,8 +205,8 @@ export interface Database {
         Update: { status?: string };
       };
       reposts: {
-        Row: { user_id: string; post_id: string; created_at: string };
-        Insert: { user_id: string; post_id: string };
+        Row: { user_id: string; post_id: string; created_at: string; quote: string | null };
+        Insert: { user_id: string; post_id: string; quote?: string | null };
         Update: never;
       };
       drafts: {
@@ -201,7 +237,25 @@ export interface Database {
       increment_view_count: { Args: { p_post_id: string }; Returns: void };
       increment_share_count: { Args: { p_post_id: string }; Returns: void };
       get_or_create_conversation: { Args: { p_other_id: string }; Returns: string };
-      toggle_repost: { Args: { p_post_id: string }; Returns: boolean };
+      toggle_repost: { Args: { p_post_id: string; p_quote?: string | null }; Returns: boolean };
+      toggle_mute: { Args: { p_target_id: string }; Returns: boolean };
+      toggle_comment_like: { Args: { p_comment_id: string }; Returns: boolean };
+      set_pinned_post: { Args: { p_post_id: string | null }; Returns: void };
+      accept_follow_request: { Args: { p_follower_id: string }; Returns: void };
+      reject_follow_request: { Args: { p_follower_id: string }; Returns: void };
+      create_group_conversation: { Args: { p_title: string | null; p_member_ids: string[] }; Returns: string };
+      leave_group_conversation: { Args: { p_conversation_id: string }; Returns: void };
+      get_my_conversations: {
+        Args: Record<string, never>;
+        Returns: {
+          id: string;
+          is_group: boolean;
+          title: string | null;
+          last_message_at: string;
+          other_user_id: string | null;
+          member_count: number;
+        }[];
+      };
       get_following_feed: {
         Args: {
           p_viewer_id: string;
@@ -222,8 +276,10 @@ export interface Database {
           share_count: number;
           repost_count: number;
           watch_time_ratio: number;
+          edited_at: string | null;
           effective_time: string;
           reposted_by: string | null;
+          quote: string | null;
         }[];
       };
       get_for_you_feed: {

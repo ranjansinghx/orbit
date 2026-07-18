@@ -10,6 +10,8 @@ import EditPostModal from "@/components/EditPostModal";
 import ReportModal from "@/components/ReportModal";
 import LikersSheet from "@/components/LikersSheet";
 import OnboardingModal from "@/components/OnboardingModal";
+import QuoteRepostModal from "@/components/QuoteRepostModal";
+import NewGroupModal from "@/components/NewGroupModal";
 import Toast from "@/components/Toast";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -34,6 +36,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <ReportModal />
       <LikersSheet />
       <OnboardingModal />
+      <QuoteRepostModal />
+      <NewGroupModal />
       <Toast />
     </div>
   );

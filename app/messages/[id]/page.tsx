@@ -4,13 +4,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCurrentProfile } from "@/lib/supabase/useAuth";
-import { useMessages, useProfilesMap } from "@/lib/supabase/hooks";
-import { sendMessage, markConversationRead } from "@/lib/supabase/actions";
+import { useMessages, useProfilesMap, useConversationParticipants } from "@/lib/supabase/hooks";
+import { sendMessage, markConversationRead, leaveGroupConversation } from "@/lib/supabase/actions";
 import { uploadMedia } from "@/lib/supabase/upload";
 import { createClient } from "@/lib/supabase/client";
 import useSWR from "swr";
 import Avatar from "@/components/Avatar";
-import { CheckIcon, ImageIcon, SendIcon } from "@/components/icons";
+import { CheckIcon, ImageIcon, SendIcon, UsersIcon } from "@/components/icons";
 import { dayLabel, clockTime } from "@/lib/format";
 import clsx from "clsx";
 
@@ -32,14 +32,20 @@ export default function ChatThreadPage() {
   const { userId: currentUserId } = useCurrentProfile();
   const conv = useConversation(conversationId);
   const { messages, mutate } = useMessages(conversationId);
+  const isGroup = !!conv?.is_group;
 
-  const otherId = conv ? (conv.user_a_id === currentUserId ? conv.user_b_id : conv.user_a_id) : undefined;
-  const profiles = useProfilesMap(otherId ? [otherId] : []);
-  const other = otherId ? profiles[otherId] : undefined;
+  const otherId = conv && !isGroup ? (conv.user_a_id === currentUserId ? conv.user_b_id : conv.user_a_id) : undefined;
+  const oneOnOneProfiles = useProfilesMap(otherId ? [otherId] : []);
+  const other = otherId ? oneOnOneProfiles[otherId] : undefined;
+
+  const { participants: groupMembers } = useConversationParticipants(isGroup ? conversationId : undefined);
+  const otherGroupMembers = groupMembers.filter((p) => p.id !== currentUserId);
+  const senderProfiles = useProfilesMap(isGroup ? groupMembers.map((p) => p.id) : []);
 
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [otherTyping, setOtherTyping] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const typingTimeout = useRef<ReturnType<typeof setTimeout>>();
@@ -53,7 +59,10 @@ export default function ChatThreadPage() {
   }, [messages.length]);
 
   // Presence-based typing indicator: each participant broadcasts { typing }
-  // on the conversation's channel; we watch for the other person's state.
+  // on the conversation's channel; we watch for anyone else's state. In a
+  // group this collapses everyone into one "someone is typing" signal
+  // rather than naming each typer — a reasonable simplification given the
+  // indicator is inherently ephemeral.
   const presenceChannelRef = useRef<ReturnType<ReturnType<typeof createClient>["channel"]> | null>(null);
   useEffect(() => {
     if (!currentUserId) return;
@@ -93,6 +102,18 @@ export default function ChatThreadPage() {
     [messages]
   );
 
+  async function handleLeaveGroup() {
+    if (!window.confirm("Leave this group? You'll stop receiving its messages.")) return;
+    setLeaving(true);
+    try {
+      await leaveGroupConversation(conversationId);
+      router.push("/messages");
+    } catch (err) {
+      console.error(err);
+      setLeaving(false);
+    }
+  }
+
   if (conv === null) {
     return (
       <div className="max-w-2xl mx-auto px-5 py-10 text-muted">
@@ -103,7 +124,12 @@ export default function ChatThreadPage() {
       </div>
     );
   }
-  if (!conv || !other || !currentUserId) return null;
+  if (!conv || !currentUserId) return null;
+  if (!isGroup && !other) return null;
+
+  const headerName = isGroup
+    ? conv.title || otherGroupMembers.map((p) => p.display_name).slice(0, 3).join(", ") || "Group"
+    : other!.display_name;
 
   async function handleSend() {
     if (!draft.trim() || !currentUserId) return;
@@ -143,15 +169,38 @@ export default function ChatThreadPage() {
         <Link href="/messages" className="text-muted text-xl leading-none px-1" aria-label="Back">
           ←
         </Link>
-        <Link href={`/profile/${other.username}`}>
-          <Avatar src={other.avatar_url} alt={other.display_name} size={38} />
-        </Link>
-        <div className="flex-1 min-w-0">
-          <Link href={`/profile/${other.username}`} className="font-semibold block truncate">
-            {other.display_name}
+        {isGroup ? (
+          <div className="w-[38px] h-[38px] rounded-full bg-surface2 border border-line flex items-center justify-center shrink-0">
+            <UsersIcon size={18} className="text-muted" />
+          </div>
+        ) : (
+          <Link href={`/profile/${other!.username}`}>
+            <Avatar src={other!.avatar_url} alt={other!.display_name} size={38} />
           </Link>
-          {otherTyping && <p className="text-xs text-text">typing...</p>}
+        )}
+        <div className="flex-1 min-w-0">
+          {isGroup ? (
+            <span className="font-semibold block truncate">{headerName}</span>
+          ) : (
+            <Link href={`/profile/${other!.username}`} className="font-semibold block truncate">
+              {headerName}
+            </Link>
+          )}
+          {otherTyping ? (
+            <p className="text-xs text-text">{isGroup ? "Someone is typing..." : "typing..."}</p>
+          ) : (
+            isGroup && <p className="text-xs text-muted">{groupMembers.length} members</p>
+          )}
         </div>
+        {isGroup && (
+          <button
+            onClick={handleLeaveGroup}
+            disabled={leaving}
+            className="text-xs text-danger font-medium shrink-0 disabled:opacity-50"
+          >
+            {leaving ? "Leaving..." : "Leave"}
+          </button>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-1">
@@ -161,6 +210,8 @@ export default function ChatThreadPage() {
           const showDay = day !== lastDay;
           lastDay = day;
           const isLastMine = mine && (idx === thread.length - 1 || thread[idx + 1]?.sender_id !== currentUserId);
+          const showSenderName = isGroup && !mine && thread[idx - 1]?.sender_id !== m.sender_id;
+          const sender = isGroup ? senderProfiles[m.sender_id] : undefined;
           return (
             <div key={m.id}>
               {showDay && (
@@ -175,6 +226,9 @@ export default function ChatThreadPage() {
                     mine ? "bg-text text-ink rounded-br-sm" : "bg-surface2 rounded-bl-sm"
                   )}
                 >
+                  {showSenderName && sender && (
+                    <p className="text-xs font-semibold text-muted mb-0.5">{sender.display_name}</p>
+                  )}
                   {m.media_url && (
                     <img src={m.media_url} alt="attachment" className="rounded-lg mb-1.5 max-h-64 object-cover" />
                   )}
