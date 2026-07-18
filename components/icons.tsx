@@ -118,10 +118,11 @@ export function HeartIcon({
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? "rgb(var(--color-video))" : "none"} className={className}>
       <path
-        d="M12 20s-7.2-4.4-9.5-9C1 7.5 3 4 6.7 4c2 0 3.5 1.2 4.3 2.6C11.8 5.2 13.3 4 15.3 4 19 4 21 7.5 19.5 11c-2.3 4.6-9.5 9-9.5 9Z"
+        d="M12 20.5C12 18 4 14 4 9C4 5.5 7 3.5 9.5 3.5C11 3.5 12 4.5 12 6.5C12 4.5 13 3.5 14.5 3.5C17 3.5 20 5.5 20 9C20 14 12 18 12 20.5Z"
         stroke={strokeColor}
         strokeWidth="1.8"
         strokeLinejoin="round"
+        strokeLinecap="round"
       />
     </svg>
   );
