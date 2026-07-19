@@ -633,7 +633,7 @@ export default function SettingsModal() {
           {tab === "closeFriends" && (
             <div className="flex flex-col gap-3">
               <p className="text-xs text-muted">
-                Posts you mark "Close friends" are only visible to people on this list. It's private — no one can see who's on it, not even them.
+                Posts you mark &ldquo;Close friends&rdquo; are only visible to people on this list. It&apos;s private — no one can see who&apos;s on it, not even them.
               </p>
               {closeFriends.length > 0 && (
                 <div className="flex flex-col gap-1">
