@@ -119,6 +119,7 @@ export default function PostOptionsMenu({
     }
   }
 
+  return (
     <div className="relative" ref={ref}>
       <button
         onClick={(e) => {
