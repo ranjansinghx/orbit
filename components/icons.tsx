@@ -33,7 +33,7 @@ export function MessagesIcon({ active, size = 22, className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
       <path
-        d="M21.5 2.5 11 13M21.5 2.5 15 21.5l-4-8.5-8.5-4L21.5 2.5Z"
+        d="M12 3C7 3 3 6.6 3 11c0 2.4 1.2 4.5 3.1 6L5 21l4.4-2.3c.8.2 1.7.3 2.6.3 5 0 9-3.6 9-8s-4-8-9-8Z"
         stroke={stroke(active)}
         strokeWidth="1.7"
         strokeLinecap="round"
@@ -94,7 +94,7 @@ export const NAV_ICONS: Record<string, (p: IconProps) => JSX.Element> = {
   text: TextIcon,
   messages: MessagesIcon,
   compose: ComposeIcon,
-  notifications: NotificationsIcon,
+  notifications: HeartIcon,
   search: SearchIcon,
   profile: ProfileIcon,
 };
