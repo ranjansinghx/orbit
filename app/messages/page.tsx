@@ -7,6 +7,7 @@ import { useUIStore } from "@/lib/store/useUIStore";
 import PageHeader from "@/components/PageHeader";
 import Avatar from "@/components/Avatar";
 import { UsersIcon } from "@/components/icons";
+import EmptyState from "@/components/EmptyState";
 import { timeAgo } from "@/lib/format";
 import useSWR from "swr";
 import { createClient } from "@/lib/supabase/client";
@@ -60,7 +61,9 @@ export default function MessagesPage() {
           </button>
         }
       />
-      {conversations.length === 0 && <p className="text-center text-muted py-16">No conversations yet.</p>}
+      {conversations.length === 0 && (
+        <EmptyState title="No conversations yet" body="Start a chat from someone's profile, or create a group." />
+      )}
       {conversations.map((c) => {
         const other = c.is_group ? null : c.other_user_id ? profiles[c.other_user_id] : null;
         const info = lastMessages[c.id];

@@ -120,7 +120,30 @@ export function useForYouFeed(viewerId: string | null | undefined) {
     setPosts((prev) => prev.filter((p) => p.id !== id));
   }, []);
 
-  return { posts, loadMore: load, hasMore: !done, loading, patchPost, removePost };
+  // Resets to a clean slate and reloads page one — used by pull-to-refresh.
+  const [refreshing, setRefreshing] = useState(false);
+  const refresh = useCallback(async () => {
+    if (viewerId === undefined) return;
+    setRefreshing(true);
+    const { data, error } = await supabase.rpc("get_for_you_feed", {
+      p_viewer_id: viewerId ?? "00000000-0000-0000-0000-000000000000",
+      p_cursor_score: null,
+      p_cursor_id: null,
+      p_limit: PAGE_SIZE,
+    });
+    setRefreshing(false);
+    if (error || !data) {
+      console.error(error);
+      return;
+    }
+    const hydrated = await hydratePosts(supabase, data, viewerId ?? null);
+    const withDefaults = hydrated.map((p) => ({ ...p, repost_count: 0, reposted_by_me: false }));
+    setPosts(withDefaults);
+    setCursor(data.length > 0 ? { score: data[data.length - 1].score, id: data[data.length - 1].id } : null);
+    setDone(data.length < PAGE_SIZE);
+  }, [viewerId, supabase]);
+
+  return { posts, loadMore: load, hasMore: !done, loading, patchPost, removePost, refresh, refreshing };
 }
 
 /** Following: chronological text-only feed from followed accounts. */
@@ -178,7 +201,35 @@ export function useFollowingFeed(viewerId: string | null | undefined) {
     setPosts((prev) => prev.filter((p) => p.id !== id));
   }, []);
 
-  return { posts, loadMore: load, hasMore: !done, loading, patchPost, removePost };
+  // Resets to a clean slate and reloads page one — used by pull-to-refresh.
+  const [refreshing, setRefreshing] = useState(false);
+  const refresh = useCallback(async () => {
+    if (!viewerId) return;
+    setRefreshing(true);
+    const { data, error } = await supabase.rpc("get_following_feed", {
+      p_viewer_id: viewerId,
+      p_cursor_ts: null,
+      p_cursor_id: null,
+      p_limit: PAGE_SIZE,
+    });
+    setRefreshing(false);
+    if (error || !data) {
+      console.error(error);
+      return;
+    }
+    const hydrated = await hydratePosts(supabase, data, viewerId);
+    const merged = hydrated.map((p, i) => ({
+      ...p,
+      reposted_by: (data[i] as any).reposted_by as string | null,
+      quote: (data[i] as any).quote as string | null,
+      edited_at: (data[i] as any).edited_at as string | null,
+    }));
+    setPosts(merged);
+    setCursor(data.length > 0 ? { ts: (data[data.length - 1] as any).effective_time, id: data[data.length - 1].id } : null);
+    setDone(data.length < PAGE_SIZE);
+  }, [viewerId, supabase]);
+
+  return { posts, loadMore: load, hasMore: !done, loading, patchPost, removePost, refresh, refreshing };
 }
 
 export interface NotificationPreferences {

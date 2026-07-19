@@ -17,6 +17,8 @@ import Link from "next/link";
 import Avatar from "@/components/Avatar";
 import FollowButton from "@/components/FollowButton";
 import ProfilePostRow from "@/components/feed/ProfilePostRow";
+import EmptyState from "@/components/EmptyState";
+import { ProfileHeaderSkeleton, GridSkeleton } from "@/components/Skeleton";
 import { GearIcon, BookmarkIcon, LockIcon, PinIcon } from "@/components/icons";
 import { compactNumber } from "@/lib/format";
 
@@ -43,7 +45,12 @@ export default function ProfilePage() {
   );
 
   if (!user) {
-    return <div className="max-w-2xl mx-auto px-5 py-10 text-muted">Loading profile...</div>;
+    return (
+      <div className="max-w-2xl mx-auto border-x border-line min-h-screen">
+        <ProfileHeaderSkeleton />
+        <GridSkeleton />
+      </div>
+    );
   }
 
   const isMe = user.id === currentUserId;
@@ -158,7 +165,7 @@ export default function ProfilePage() {
           </p>
         </div>
       ) : sortedPosts.length === 0 ? (
-        <p className="text-center text-muted py-16">No posts yet.</p>
+        <EmptyState title="No posts yet" body={isMe ? "Share your first post to get started." : `${user.display_name} hasn't posted yet.`} />
       ) : (
         sortedPosts.map((p) => (
           <ProfilePostRow key={p.id} post={p} onPatch={patchPost} onDeleted={() => removePost(p.id)} />

@@ -13,6 +13,7 @@ import OnboardingModal from "@/components/OnboardingModal";
 import QuoteRepostModal from "@/components/QuoteRepostModal";
 import NewGroupModal from "@/components/NewGroupModal";
 import PostInsightsModal from "@/components/PostInsightsModal";
+import CommandPalette from "@/components/CommandPalette";
 import Toast from "@/components/Toast";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -40,6 +41,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <QuoteRepostModal />
       <NewGroupModal />
       <PostInsightsModal />
+      <CommandPalette />
       <Toast />
     </div>
   );

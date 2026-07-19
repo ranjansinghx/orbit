@@ -3,15 +3,21 @@
 import { useEffect, useRef } from "react";
 import { useCurrentProfile } from "@/lib/supabase/useAuth";
 import { useFollowingFeed, useFollowCounts } from "@/lib/supabase/hooks";
+import { useWindowPullToRefresh } from "@/hooks/usePullToRefresh";
 import TextPostCard from "@/components/feed/TextPostCard";
 import SuggestedFollows from "@/components/SuggestedFollows";
 import PageHeader from "@/components/PageHeader";
+import EmptyState from "@/components/EmptyState";
+import { TextFeedSkeleton } from "@/components/Skeleton";
+import OrbitMark from "@/components/OrbitMark";
 
 export default function FollowingTextPage() {
   const { userId } = useCurrentProfile();
-  const { posts, loadMore, hasMore, loading, patchPost, removePost } = useFollowingFeed(userId);
+  const { posts, loadMore, hasMore, loading, patchPost, removePost, refresh, refreshing } = useFollowingFeed(userId);
   const { counts } = useFollowCounts(userId ?? undefined);
   const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const { pullDistance, threshold } = useWindowPullToRefresh(refresh);
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -29,14 +35,25 @@ export default function FollowingTextPage() {
   const showSuggestions = counts.following < 8;
 
   return (
-    <div className="max-w-2xl mx-auto border-x border-line min-h-screen">
+    <div className="max-w-2xl mx-auto border-x border-line min-h-screen relative">
+      {(pullDistance > 0 || refreshing) && (
+        <div
+          className="flex justify-center transition-[height] overflow-hidden"
+          style={{ height: refreshing ? threshold : pullDistance }}
+        >
+          <div className="self-end mb-2 w-7 h-7 rounded-full bg-surface2 border border-line flex items-center justify-center">
+            <OrbitMark size={16} spin={refreshing} />
+          </div>
+        </div>
+      )}
       <PageHeader title="Following" subtitle="Text posts, chronological" />
       {showSuggestions && <SuggestedFollows />}
+      {posts.length === 0 && loading && <TextFeedSkeleton />}
       {posts.length === 0 && !loading ? (
-        <div className="px-6 py-16 text-center text-muted">
-          <p className="mb-1">Nothing here yet.</p>
-          <p className="text-sm">Follow more accounts to see their text posts.</p>
-        </div>
+        <EmptyState
+          title="Nothing here yet"
+          body="Follow more accounts to see their text posts show up here."
+        />
       ) : (
         posts.map((post) => (
           <TextPostCard key={post.id} post={post} onPatch={patchPost} onDeleted={() => removePost(post.id)} />

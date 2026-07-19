@@ -8,6 +8,7 @@ import TextPostCard from "@/components/feed/TextPostCard";
 import ProfilePostRow from "@/components/feed/ProfilePostRow";
 import PageHeader from "@/components/PageHeader";
 import { PlusIcon } from "@/components/icons";
+import EmptyState from "@/components/EmptyState";
 
 export default function SavedPage() {
   const { userId } = useCurrentProfile();
@@ -74,10 +75,7 @@ export default function SavedPage() {
       </div>
 
       {posts.length === 0 ? (
-        <div className="px-6 py-16 text-center text-muted">
-          <p className="mb-1">Nothing saved here yet.</p>
-          <p className="text-sm">Use the ⋯ menu on any post to save it.</p>
-        </div>
+        <EmptyState title="Nothing saved here yet" body="Use the ⋯ menu on any post to save it." />
       ) : (
         posts.map((p) =>
           p.type === "text" ? (

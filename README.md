@@ -125,6 +125,34 @@ Three more migrations, `0018` through `0020` — run them in order after `0017_g
   into named folders from the Saved page or the "Move to collection" option
   in the `···` menu.
 
+## What's new (round 3): UX polish — skeletons, command palette, keyboard shortcuts, pull-to-refresh, notification grouping, empty states
+
+No migrations for this round — everything here is UI/client-side. New files:
+`components/Skeleton.tsx`, `components/EmptyState.tsx`, `components/CommandPalette.tsx`,
+`hooks/usePullToRefresh.ts`.
+
+- **Skeleton loading states** — feeds, profile headers, and post grids now
+  show shimmering placeholders instead of a blank screen while data loads.
+- **Command palette (⌘K / Ctrl+K)** — jump to any tab, search people, open
+  Settings, or start a new post without touching the mouse.
+- **Keyboard shortcuts on the For You feed** — `j`/`k` move a card at a
+  time, `l` likes the card in view, `r` opens its comments. (Scoped to the
+  swipeable video/photo feed, where "one focused item at a time" makes
+  sense — the Following feed is an ordinary scrolling list, so shortcuts
+  there would have no clear "current post" to act on.)
+- **Pull-to-refresh** on both feeds — drag down from the top on mobile.
+  `useForYouFeed`/`useFollowingFeed` gained a `refresh()` that resets to
+  page one, which the gesture calls; there's a window-scroll variant of
+  the hook for the Following feed since it scrolls the document rather
+  than an internal container.
+- **Notification grouping** — consecutive likes/reposts on the same post
+  collapse into "Maya and 12 others liked your post" instead of one row
+  each. Follows, comments, mentions, and follow requests stay individual
+  since each needs its own attention.
+- **Illustrated empty states** — a consistent empty-state pattern (Orbit
+  mark, headline, short body) replaces plain "nothing here" text across
+  Home, Following, Saved, Notifications, Messages, and profile pages.
+
 ## What's real now
 
 
