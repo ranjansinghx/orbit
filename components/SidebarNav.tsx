@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
@@ -10,6 +11,8 @@ import { useUIStore } from "@/lib/store/useUIStore";
 import { useCurrentProfile } from "@/lib/supabase/useAuth";
 import { useUnreadCounts } from "@/lib/supabase/hooks";
 import Avatar from "@/components/Avatar";
+
+const DOUBLE_TAP_MS = 350;
 
 function isItemActive(pathname: string, key: string, href: string | null) {
   if (href === null) return false;
@@ -42,10 +45,22 @@ function RowIcon({ itemKey, active }: { itemKey: string; active: boolean }) {
 export default function SidebarNav() {
   const pathname = usePathname();
   const openComposer = useUIStore((s) => s.openComposer);
+  const triggerHomeRefresh = useUIStore((s) => s.triggerHomeRefresh);
   const { profile, userId } = useCurrentProfile();
   const unread = useUnreadCounts(userId ?? undefined);
+  const lastHomeTap = useRef(0);
 
   if (pathname === "/login") return null;
+
+  function handleHomeClick(e: React.MouseEvent) {
+    if (pathname !== "/") return;
+    const now = Date.now();
+    if (now - lastHomeTap.current < DOUBLE_TAP_MS) {
+      e.preventDefault();
+      triggerHomeRefresh();
+    }
+    lastHomeTap.current = now;
+  }
 
   return (
     <nav className="hidden md:flex md:flex-col md:w-64 lg:w-72 shrink-0 h-screen sticky top-0 border-r border-line px-4 py-6">
@@ -89,7 +104,7 @@ export default function SidebarNav() {
                   {inner}
                 </button>
               ) : (
-                <Link href={href!} className={rowClasses}>
+                <Link href={href!} className={rowClasses} onClick={item.key === "home" ? handleHomeClick : undefined}>
                   {inner}
                 </Link>
               )}

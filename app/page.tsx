@@ -21,6 +21,20 @@ export default function HomePage() {
 
   const { pullDistance, threshold } = usePullToRefresh(containerRef, refresh);
 
+  // Double-tapping the Home nav icon while already on this page scrolls to
+  // top and reloads page one — see BottomTabs/SidebarNav's handleHomeClick.
+  const homeRefreshSignal = useUIStore((s) => s.homeRefreshSignal);
+  const isFirstRefreshSignal = useRef(true);
+  useEffect(() => {
+    if (isFirstRefreshSignal.current) {
+      isFirstRefreshSignal.current = false;
+      return;
+    }
+    containerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [homeRefreshSignal]);
+
   function handleScroll() {
     const el = containerRef.current;
     if (!el || loading || !hasMore) return;

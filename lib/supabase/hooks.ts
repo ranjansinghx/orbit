@@ -66,6 +66,11 @@ async function hydratePosts(
 
   return rows.map((r) => ({
     ...r,
+    like_count: r.like_count ?? 0,
+    comment_count: r.comment_count ?? 0,
+    share_count: r.share_count ?? 0,
+    repost_count: r.repost_count ?? 0,
+    view_count: r.view_count ?? 0,
     liked_by_me: likedSet.has(r.id),
     reposted_by_me: repostedSet.has(r.id),
     hashtags: tagMap.get(r.id) ?? [],

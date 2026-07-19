@@ -26,6 +26,7 @@ interface UIState {
   quoteRepostPostId: string | null;
   newGroupOpen: boolean;
   insightsPostId: string | null;
+  homeRefreshSignal: number;
   toast: string | null;
   openComposer: (draft?: ComposerDraft) => void;
   closeComposer: () => void;
@@ -45,6 +46,7 @@ interface UIState {
   closeNewGroup: () => void;
   openInsights: (postId: string) => void;
   closeInsights: () => void;
+  triggerHomeRefresh: () => void;
   showToast: (msg: string) => void;
 }
 
@@ -59,6 +61,7 @@ export const useUIStore = create<UIState>((set) => ({
   quoteRepostPostId: null,
   newGroupOpen: false,
   insightsPostId: null,
+  homeRefreshSignal: 0,
   toast: null,
   openComposer: (draft) => set({ composerOpen: true, composerDraft: draft ?? null }),
   closeComposer: () => set({ composerOpen: false, composerDraft: null }),
@@ -78,6 +81,7 @@ export const useUIStore = create<UIState>((set) => ({
   closeNewGroup: () => set({ newGroupOpen: false }),
   openInsights: (postId) => set({ insightsPostId: postId }),
   closeInsights: () => set({ insightsPostId: null }),
+  triggerHomeRefresh: () => set((s) => ({ homeRefreshSignal: s.homeRefreshSignal + 1 })),
   showToast: (msg) => {
     set({ toast: msg });
     setTimeout(() => set((s) => (s.toast === msg ? { toast: null } : s)), 2200);

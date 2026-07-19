@@ -14,7 +14,8 @@ export function timeAgo(iso: string): string {
   return `${month}mo`;
 }
 
-export function compactNumber(n: number): string {
+export function compactNumber(n: number | null | undefined): string {
+  if (n == null || !Number.isFinite(n)) return "0";
   if (n < 1000) return `${n}`;
   if (n < 1_000_000) return `${(n / 1000).toFixed(n % 1000 >= 100 ? 1 : 0)}K`;
   return `${(n / 1_000_000).toFixed(1)}M`;

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
@@ -9,6 +10,8 @@ import { useCurrentProfile } from "@/lib/supabase/useAuth";
 import { useUnreadCounts } from "@/lib/supabase/hooks";
 import { useUIStore } from "@/lib/store/useUIStore";
 import Avatar from "@/components/Avatar";
+
+const DOUBLE_TAP_MS = 350;
 
 function isItemActive(pathname: string, href: string | null) {
   if (href === null) return false;
@@ -22,8 +25,20 @@ export default function BottomTabs() {
   const { profile, userId } = useCurrentProfile();
   const unread = useUnreadCounts(userId ?? undefined);
   const openComposer = useUIStore((s) => s.openComposer);
+  const triggerHomeRefresh = useUIStore((s) => s.triggerHomeRefresh);
+  const lastHomeTap = useRef(0);
 
   if (pathname === "/login") return null;
+
+  function handleHomeClick(e: React.MouseEvent) {
+    if (pathname !== "/") return; // let the normal navigation happen otherwise
+    const now = Date.now();
+    if (now - lastHomeTap.current < DOUBLE_TAP_MS) {
+      e.preventDefault();
+      triggerHomeRefresh();
+    }
+    lastHomeTap.current = now;
+  }
 
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-line bg-ink/95 backdrop-blur-sm pb-[env(safe-area-inset-bottom)]">
@@ -72,7 +87,12 @@ export default function BottomTabs() {
                   {content}
                 </button>
               ) : (
-                <Link href={href!} aria-label={item.label} className="flex items-center justify-center py-3">
+                <Link
+                  href={href!}
+                  aria-label={item.label}
+                  className="flex items-center justify-center py-3"
+                  onClick={item.key === "home" ? handleHomeClick : undefined}
+                >
                   {content}
                 </Link>
               )}
