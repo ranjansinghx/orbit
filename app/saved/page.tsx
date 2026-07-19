@@ -1,14 +1,20 @@
 "use client";
 
+import { useState } from "react";
 import { useCurrentProfile } from "@/lib/supabase/useAuth";
-import { useSavedFeed } from "@/lib/supabase/hooks";
+import { useSavedFeed, useCollections } from "@/lib/supabase/hooks";
+import { createCollection } from "@/lib/supabase/actions";
 import TextPostCard from "@/components/feed/TextPostCard";
 import ProfilePostRow from "@/components/feed/ProfilePostRow";
 import PageHeader from "@/components/PageHeader";
+import { PlusIcon } from "@/components/icons";
 
 export default function SavedPage() {
   const { userId } = useCurrentProfile();
-  const { posts, mutate } = useSavedFeed(userId);
+  const { collections, mutate: mutateCollections } = useCollections(userId);
+  const [activeCollection, setActiveCollection] = useState<string | "all">("all");
+  const { posts, mutate } = useSavedFeed(userId, activeCollection === "all" ? undefined : activeCollection);
+  const [creating, setCreating] = useState(false);
 
   function patchPost(id: string, patch: any) {
     mutate((current: any) => current?.map((p: any) => (p.id === id ? { ...p, ...patch } : p)), {
@@ -20,13 +26,57 @@ export default function SavedPage() {
     mutate((current: any) => current?.filter((p: any) => p.id !== id), { revalidate: false });
   }
 
+  async function handleNewCollection() {
+    const name = window.prompt("Collection name")?.trim();
+    if (!name) return;
+    setCreating(true);
+    try {
+      await createCollection(name);
+      mutateCollections();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCreating(false);
+    }
+  }
+
   return (
     <div className="max-w-2xl mx-auto border-x border-line min-h-screen">
       <PageHeader title="Saved" subtitle="Posts you've bookmarked" />
+
+      <div className="flex gap-2 px-5 py-3 overflow-x-auto border-b border-line">
+        <button
+          onClick={() => setActiveCollection("all")}
+          className={`px-3.5 py-1.5 rounded-full text-sm shrink-0 transition-colors ${
+            activeCollection === "all" ? "bg-paper text-ink font-medium" : "border border-line text-muted"
+          }`}
+        >
+          All
+        </button>
+        {collections.map((c) => (
+          <button
+            key={c.id}
+            onClick={() => setActiveCollection(c.id)}
+            className={`px-3.5 py-1.5 rounded-full text-sm shrink-0 transition-colors ${
+              activeCollection === c.id ? "bg-paper text-ink font-medium" : "border border-line text-muted"
+            }`}
+          >
+            {c.name} {c.post_count > 0 && <span className="opacity-60">({c.post_count})</span>}
+          </button>
+        ))}
+        <button
+          onClick={handleNewCollection}
+          disabled={creating}
+          className="px-3 py-1.5 rounded-full text-sm shrink-0 border border-dashed border-line text-muted hover:border-muted transition-colors flex items-center gap-1"
+        >
+          <PlusIcon size={13} /> New
+        </button>
+      </div>
+
       {posts.length === 0 ? (
         <div className="px-6 py-16 text-center text-muted">
-          <p className="mb-1">Nothing saved yet.</p>
-          <p className="text-sm">Use the ⋯ menu on any post to save it here.</p>
+          <p className="mb-1">Nothing saved here yet.</p>
+          <p className="text-sm">Use the ⋯ menu on any post to save it.</p>
         </div>
       ) : (
         posts.map((p) =>

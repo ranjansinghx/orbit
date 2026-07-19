@@ -1,6 +1,8 @@
 export type PostType = "video" | "photo" | "text";
 export type NotificationType = "like" | "comment" | "follow" | "new_post" | "mention" | "repost" | "follow_request";
 export type FollowStatus = "pending" | "accepted";
+export type PostAudience = "everyone" | "followers" | "close_friends";
+export type ReplyPermission = "everyone" | "followers" | "mentioned";
 
 export interface Database {
   public: {
@@ -47,6 +49,8 @@ export interface Database {
           watch_sample_count: number;
           repost_count: number;
           edited_at: string | null;
+          audience: PostAudience;
+          reply_permission: ReplyPermission;
         };
         Insert: {
           author_id: string;
@@ -54,6 +58,8 @@ export interface Database {
           media_urls?: string[];
           caption?: string;
           watch_time_ratio?: number;
+          audience?: PostAudience;
+          reply_permission?: ReplyPermission;
         };
         Update: Partial<Database["public"]["Tables"]["posts"]["Row"]>;
       };
@@ -80,6 +86,31 @@ export interface Database {
         Row: { user_id: string; muted_id: string; created_at: string };
         Insert: { user_id: string; muted_id: string };
         Update: never;
+      };
+      close_friends: {
+        Row: { owner_id: string; friend_id: string; created_at: string };
+        Insert: { owner_id: string; friend_id: string };
+        Update: never;
+      };
+      polls: {
+        Row: { id: string; post_id: string; closes_at: string | null; created_at: string };
+        Insert: { post_id: string; closes_at?: string | null };
+        Update: never;
+      };
+      poll_options: {
+        Row: { id: string; poll_id: string; position: number; label: string; vote_count: number };
+        Insert: { poll_id: string; position: number; label: string };
+        Update: never;
+      };
+      poll_votes: {
+        Row: { poll_id: string; option_id: string; user_id: string; created_at: string };
+        Insert: { poll_id: string; option_id: string; user_id: string };
+        Update: Partial<{ option_id: string }>;
+      };
+      collections: {
+        Row: { id: string; user_id: string; name: string; created_at: string };
+        Insert: { user_id: string; name: string };
+        Update: Partial<{ name: string }>;
       };
       conversation_participants: {
         Row: { conversation_id: string; user_id: string; joined_at: string };
@@ -152,9 +183,9 @@ export interface Database {
         Update: never;
       };
       saved_posts: {
-        Row: { user_id: string; post_id: string; created_at: string };
-        Insert: { user_id: string; post_id: string };
-        Update: never;
+        Row: { user_id: string; post_id: string; created_at: string; collection_id: string | null };
+        Insert: { user_id: string; post_id: string; collection_id?: string | null };
+        Update: Partial<{ collection_id: string | null }>;
       };
       notification_preferences: {
         Row: {
@@ -241,6 +272,25 @@ export interface Database {
       toggle_mute: { Args: { p_target_id: string }; Returns: boolean };
       toggle_comment_like: { Args: { p_comment_id: string }; Returns: boolean };
       set_pinned_post: { Args: { p_post_id: string | null }; Returns: void };
+      toggle_close_friend: { Args: { p_friend_id: string }; Returns: boolean };
+      set_post_audience: { Args: { p_post_id: string; p_audience: PostAudience }; Returns: void };
+      set_post_reply_permission: { Args: { p_post_id: string; p_permission: ReplyPermission }; Returns: void };
+      create_poll: { Args: { p_post_id: string; p_options: string[]; p_closes_at?: string | null }; Returns: string };
+      cast_poll_vote: { Args: { p_option_id: string }; Returns: void };
+      get_poll_results: {
+        Args: { p_post_id: string };
+        Returns: {
+          poll_id: string;
+          closes_at: string | null;
+          option_id: string;
+          label: string;
+          vote_count: number;
+          total_votes: number;
+          my_vote: boolean;
+        }[];
+      };
+      create_collection: { Args: { p_name: string }; Returns: string };
+      move_saved_post: { Args: { p_post_id: string; p_collection_id: string | null }; Returns: void };
       accept_follow_request: { Args: { p_follower_id: string }; Returns: void };
       reject_follow_request: { Args: { p_follower_id: string }; Returns: void };
       create_group_conversation: { Args: { p_title: string | null; p_member_ids: string[] }; Returns: string };

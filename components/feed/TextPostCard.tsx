@@ -7,6 +7,7 @@ import { toggleLike, registerShare, toggleRepost } from "@/lib/supabase/actions"
 import Avatar from "@/components/Avatar";
 import HashtagText from "@/components/HashtagText";
 import PostOptionsMenu from "@/components/PostOptionsMenu";
+import PollCard from "@/components/PollCard";
 import { compactNumber, timeAgo } from "@/lib/format";
 import { HeartIcon, CommentIcon, ShareIcon, RepostIcon } from "@/components/icons";
 
@@ -108,6 +109,7 @@ export default function TextPostCard({
             </span>
           </div>
           <HashtagText text={post.caption} className="text-[15px] leading-relaxed block mt-0.5" />
+          <PollCard postId={post.id} />
 
           <div className="flex items-center gap-6 mt-3 max-w-md">
             <button

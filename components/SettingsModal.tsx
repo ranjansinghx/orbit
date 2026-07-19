@@ -6,13 +6,14 @@ import Link from "next/link";
 import { useUIStore } from "@/lib/store/useUIStore";
 import { useThemeStore } from "@/lib/store/useThemeStore";
 import { useCurrentProfile } from "@/lib/supabase/useAuth";
-import { useBlockedProfiles, useMutedProfiles, usePendingFollowRequests, useNotificationPreferences } from "@/lib/supabase/hooks";
+import { useBlockedProfiles, useMutedProfiles, usePendingFollowRequests, useCloseFriends, useSearch, useNotificationPreferences } from "@/lib/supabase/hooks";
 import {
   updateProfile,
   signOut,
   deleteAccount,
   toggleBlock,
   toggleMute,
+  toggleCloseFriend,
   setPrivateAccount,
   acceptFollowRequest,
   rejectFollowRequest,
@@ -54,10 +55,13 @@ export default function SettingsModal() {
   const { preferences, mutate: mutatePrefs } = useNotificationPreferences(userId);
   const [savingPrefs, setSavingPrefs] = useState<string | null>(null);
 
-  const [tab, setTab] = useState<"profile" | "password" | "notifications" | "blocked" | "muted" | "requests">("profile");
+  const [tab, setTab] = useState<"profile" | "password" | "notifications" | "blocked" | "muted" | "requests" | "closeFriends">("profile");
   const { blocked, mutate: mutateBlocked } = useBlockedProfiles(userId);
   const { muted, mutate: mutateMuted } = useMutedProfiles(userId);
   const { requests: pendingRequests, mutate: mutateRequests } = usePendingFollowRequests(userId);
+  const { closeFriends, mutate: mutateCloseFriends } = useCloseFriends(userId);
+  const [closeFriendQuery, setCloseFriendQuery] = useState("");
+  const { people: closeFriendCandidates } = useSearch(closeFriendQuery);
   const [savingPrivacy, setSavingPrivacy] = useState(false);
 
   const { theme, setTheme } = useThemeStore();
@@ -244,6 +248,15 @@ export default function SettingsModal() {
     }
   }
 
+  async function handleToggleCloseFriend(friendId: string) {
+    try {
+      await toggleCloseFriend(friendId);
+      mutateCloseFriends();
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/70 animate-fade-in" onClick={close}>
       <div
@@ -258,7 +271,7 @@ export default function SettingsModal() {
         </div>
 
         <div className="flex gap-1 px-5 pt-4 flex-wrap">
-          {(["profile", "password", "notifications", "blocked", "muted", "requests"] as const).map((t) => (
+          {(["profile", "password", "notifications", "blocked", "muted", "requests", "closeFriends"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -266,7 +279,7 @@ export default function SettingsModal() {
                 tab === t ? "bg-paper text-ink font-medium" : "text-muted"
               }`}
             >
-              {t}
+              {t === "closeFriends" ? "Close friends" : t}
               {t === "requests" && pendingRequests.length > 0 && (
                 <span className="absolute -top-1 -right-1 bg-danger text-paper text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
                   {pendingRequests.length}
@@ -614,6 +627,58 @@ export default function SettingsModal() {
                   </div>
                 ))
               )}
+            </div>
+          )}
+
+          {tab === "closeFriends" && (
+            <div className="flex flex-col gap-3">
+              <p className="text-xs text-muted">
+                Posts you mark "Close friends" are only visible to people on this list. It's private — no one can see who's on it, not even them.
+              </p>
+              {closeFriends.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  {closeFriends.map((p) => (
+                    <div key={p.id} className="flex items-center gap-3 py-2">
+                      <Avatar src={p.avatar_url} alt={p.display_name} size={36} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{p.display_name}</p>
+                        <p className="text-xs text-muted truncate">@{p.username}</p>
+                      </div>
+                      <button
+                        onClick={() => handleToggleCloseFriend(p.id)}
+                        className="px-3 py-1.5 rounded-full border border-line text-xs font-medium hover:border-muted transition-colors shrink-0"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <input
+                value={closeFriendQuery}
+                onChange={(e) => setCloseFriendQuery(e.target.value)}
+                placeholder="Search people to add..."
+                className="bg-surface2 border border-line rounded-lg px-3 py-2.5 text-sm outline-none placeholder:text-muted focus:border-muted"
+              />
+              <div className="flex flex-col gap-1 max-h-52 overflow-y-auto">
+                {closeFriendCandidates
+                  .filter((p) => p.id !== userId && !closeFriends.some((cf) => cf.id === p.id))
+                  .map((p) => (
+                    <div key={p.id} className="flex items-center gap-3 py-2">
+                      <Avatar src={p.avatar_url} alt={p.display_name} size={36} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{p.display_name}</p>
+                        <p className="text-xs text-muted truncate">@{p.username}</p>
+                      </div>
+                      <button
+                        onClick={() => handleToggleCloseFriend(p.id)}
+                        className="px-3 py-1.5 rounded-full bg-paper text-ink text-xs font-semibold shrink-0"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  ))}
+              </div>
             </div>
           )}
         </div>

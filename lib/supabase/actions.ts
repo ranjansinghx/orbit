@@ -38,6 +38,8 @@ export async function createPost(input: {
   type: PostType;
   caption: string;
   mediaUrls: string[];
+  audience?: import("./database.types").PostAudience;
+  replyPermission?: import("./database.types").ReplyPermission;
 }) {
   const supabase = createClient();
   const { data, error } = await supabase
@@ -48,6 +50,8 @@ export async function createPost(input: {
       caption: input.caption,
       media_urls: input.mediaUrls,
       watch_time_ratio: 0,
+      audience: input.audience ?? "everyone",
+      reply_permission: input.replyPermission ?? "everyone",
     })
     .select()
     .single();
@@ -270,6 +274,55 @@ export async function createGroupConversation(title: string | null, memberIds: s
 export async function leaveGroupConversation(conversationId: string) {
   const supabase = createClient();
   const { error } = await supabase.rpc("leave_group_conversation", { p_conversation_id: conversationId });
+  if (error) throw error;
+}
+
+export async function toggleCloseFriend(friendId: string) {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("toggle_close_friend", { p_friend_id: friendId });
+  if (error) throw error;
+  return data as boolean; // true = now a close friend
+}
+
+export async function setPostAudience(postId: string, audience: import("./database.types").PostAudience) {
+  const supabase = createClient();
+  const { error } = await supabase.rpc("set_post_audience", { p_post_id: postId, p_audience: audience });
+  if (error) throw error;
+}
+
+export async function setPostReplyPermission(postId: string, permission: import("./database.types").ReplyPermission) {
+  const supabase = createClient();
+  const { error } = await supabase.rpc("set_post_reply_permission", { p_post_id: postId, p_permission: permission });
+  if (error) throw error;
+}
+
+export async function createPoll(postId: string, options: string[], closesAt?: string | null) {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("create_poll", {
+    p_post_id: postId,
+    p_options: options,
+    p_closes_at: closesAt ?? null,
+  });
+  if (error) throw error;
+  return data as string; // poll id
+}
+
+export async function castPollVote(optionId: string) {
+  const supabase = createClient();
+  const { error } = await supabase.rpc("cast_poll_vote", { p_option_id: optionId });
+  if (error) throw error;
+}
+
+export async function createCollection(name: string) {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("create_collection", { p_name: name });
+  if (error) throw error;
+  return data as string; // collection id
+}
+
+export async function moveSavedPost(postId: string, collectionId: string | null) {
+  const supabase = createClient();
+  const { error } = await supabase.rpc("move_saved_post", { p_post_id: postId, p_collection_id: collectionId });
   if (error) throw error;
 }
 

@@ -4,14 +4,27 @@ import { useEffect, useRef, useState } from "react";
 import { useUIStore } from "@/lib/store/useUIStore";
 import { useCurrentProfile } from "@/lib/supabase/useAuth";
 import { useDrafts } from "@/lib/supabase/hooks";
-import { createPost, saveDraft, deleteDraft } from "@/lib/supabase/actions";
+import { createPost, saveDraft, deleteDraft, createPoll } from "@/lib/supabase/actions";
 import { uploadMedia } from "@/lib/supabase/upload";
-import { PostType } from "@/lib/supabase/database.types";
-import { CloseIcon, ImageIcon, VideoIcon, TextIcon, TrashIcon } from "@/components/icons";
+import { PostType, PostAudience, ReplyPermission } from "@/lib/supabase/database.types";
+import { CloseIcon, ImageIcon, VideoIcon, TextIcon, TrashIcon, GlobeIcon, UsersIcon, HeartIcon, PlusIcon, ChartIcon } from "@/components/icons";
+import MentionHashtagTextarea from "@/components/MentionHashtagTextarea";
 import { timeAgo } from "@/lib/format";
 import clsx from "clsx";
 
 const MAX_PHOTOS = 10;
+const MAX_POLL_OPTIONS = 4;
+
+const AUDIENCE_OPTIONS: { value: PostAudience; label: string }[] = [
+  { value: "everyone", label: "Everyone" },
+  { value: "followers", label: "Followers" },
+  { value: "close_friends", label: "Close friends" },
+];
+const REPLY_OPTIONS: { value: ReplyPermission; label: string }[] = [
+  { value: "everyone", label: "Everyone" },
+  { value: "followers", label: "Followers" },
+  { value: "mentioned", label: "Mentioned only" },
+];
 
 export default function Composer() {
   const open = useUIStore((s) => s.composerOpen);
@@ -33,6 +46,11 @@ export default function Composer() {
   const [uploading, setUploading] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [audience, setAudience] = useState<PostAudience>("everyone");
+  const [replyPermission, setReplyPermission] = useState<ReplyPermission>("everyone");
+  const [pollEnabled, setPollEnabled] = useState(false);
+  const [pollOptions, setPollOptions] = useState<string[]>(["", ""]);
+  const [pollDuration, setPollDuration] = useState<"none" | "1" | "3" | "7">("1");
 
   useEffect(() => {
     if (!open) {
@@ -44,7 +62,10 @@ export default function Composer() {
 
   const needsMedia = type !== "text";
   const totalMediaCount = existingUrls.length + files.length;
-  const canPost = userId && !uploading && (type === "text" ? caption.trim().length > 0 : totalMediaCount > 0);
+  const validPollOptions = pollOptions.map((o) => o.trim()).filter(Boolean);
+  const pollValid = !pollEnabled || validPollOptions.length >= 2;
+  const canPost =
+    userId && !uploading && pollValid && (type === "text" ? caption.trim().length > 0 || (pollEnabled && pollValid) : totalMediaCount > 0);
   const canSaveDraft = userId && !savingDraft && (caption.trim().length > 0 || totalMediaCount > 0);
 
   function reset() {
@@ -54,6 +75,11 @@ export default function Composer() {
     setExistingUrls([]);
     setFiles([]);
     setPreviewUrls([]);
+    setAudience("everyone");
+    setReplyPermission("everyone");
+    setPollEnabled(false);
+    setPollOptions(["", ""]);
+    setPollDuration("1");
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -100,7 +126,12 @@ export default function Composer() {
     setUploading(true);
     try {
       const mediaUrls = needsMedia ? await uploadPendingFiles() : [];
-      await createPost({ authorId: userId, type, caption, mediaUrls });
+      const post = await createPost({ authorId: userId, type, caption, mediaUrls, audience, replyPermission });
+      if (type === "text" && pollEnabled && validPollOptions.length >= 2) {
+        const closesAt =
+          pollDuration === "none" ? null : new Date(Date.now() + Number(pollDuration) * 24 * 60 * 60 * 1000).toISOString();
+        await createPoll(post.id, validPollOptions, closesAt);
+      }
       if (draftId) {
         deleteDraft(draftId).catch(() => {});
         mutateDrafts();
@@ -321,18 +352,131 @@ export default function Composer() {
                 </div>
               )}
 
-              <textarea
+              <MentionHashtagTextarea
                 value={caption}
-                onChange={(e) => setCaption(e.target.value)}
+                onChange={setCaption}
                 placeholder={
                   type === "text"
                     ? "What's on your mind? Use #hashtags and @mentions."
                     : "Write a caption... #hashtags and @mentions work here too"
                 }
                 rows={type === "text" ? 5 : 3}
-                className="w-full bg-surface2 rounded-xl p-3 text-[15px] placeholder:text-muted outline-none resize-none mb-4 border border-line focus:border-muted"
+                className="w-full bg-surface2 rounded-xl p-3 text-[15px] placeholder:text-muted outline-none resize-none border border-line focus:border-muted"
                 maxLength={500}
               />
+
+              {type === "text" && (
+                <div className="mt-3">
+                  {!pollEnabled ? (
+                    <button
+                      onClick={() => setPollEnabled(true)}
+                      className="flex items-center gap-1.5 text-sm text-muted hover:text-paper transition-colors"
+                    >
+                      <ChartIcon size={15} /> Add a poll
+                    </button>
+                  ) : (
+                    <div className="border border-line rounded-xl p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium text-muted flex items-center gap-1.5">
+                          <ChartIcon size={14} /> Poll
+                        </span>
+                        <button
+                          onClick={() => {
+                            setPollEnabled(false);
+                            setPollOptions(["", ""]);
+                          }}
+                          className="text-muted hover:text-danger transition-colors"
+                          aria-label="Remove poll"
+                        >
+                          <CloseIcon size={14} />
+                        </button>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        {pollOptions.map((opt, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <input
+                              value={opt}
+                              onChange={(e) =>
+                                setPollOptions((prev) => prev.map((o, idx) => (idx === i ? e.target.value : o)))
+                              }
+                              placeholder={`Option ${i + 1}`}
+                              maxLength={60}
+                              className="flex-1 bg-surface2 rounded-lg px-3 py-2 text-sm outline-none placeholder:text-muted border border-line focus:border-muted"
+                            />
+                            {pollOptions.length > 2 && (
+                              <button
+                                onClick={() => setPollOptions((prev) => prev.filter((_, idx) => idx !== i))}
+                                className="text-muted hover:text-danger transition-colors shrink-0"
+                                aria-label={`Remove option ${i + 1}`}
+                              >
+                                <CloseIcon size={13} />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      {pollOptions.length < MAX_POLL_OPTIONS && (
+                        <button
+                          onClick={() => setPollOptions((prev) => [...prev, ""])}
+                          className="flex items-center gap-1 text-xs text-muted hover:text-paper transition-colors mt-2"
+                        >
+                          <PlusIcon size={12} /> Add option
+                        </button>
+                      )}
+                      <div className="flex items-center gap-2 mt-3">
+                        <span className="text-xs text-muted">Voting ends:</span>
+                        {(["1", "3", "7", "none"] as const).map((d) => (
+                          <button
+                            key={d}
+                            onClick={() => setPollDuration(d)}
+                            className={clsx(
+                              "px-2.5 py-1 rounded-full text-xs border transition-colors",
+                              pollDuration === d ? "bg-paper text-ink border-paper font-medium" : "border-line text-muted"
+                            )}
+                          >
+                            {d === "none" ? "No limit" : `${d}d`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center gap-2 mt-4">
+                <div className="flex items-center bg-surface2 rounded-full border border-line p-0.5">
+                  {AUDIENCE_OPTIONS.map((o) => (
+                    <button
+                      key={o.value}
+                      onClick={() => setAudience(o.value)}
+                      className={clsx(
+                        "flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium transition-colors",
+                        audience === o.value ? "bg-paper text-ink" : "text-muted"
+                      )}
+                    >
+                      {o.value === "everyone" && <GlobeIcon size={12} />}
+                      {o.value === "followers" && <UsersIcon size={13} />}
+                      {o.value === "close_friends" && <HeartIcon size={12} />}
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center bg-surface2 rounded-full border border-line p-0.5">
+                  <span className="text-[10px] text-muted pl-2 pr-1">Replies:</span>
+                  {REPLY_OPTIONS.map((o) => (
+                    <button
+                      key={o.value}
+                      onClick={() => setReplyPermission(o.value)}
+                      className={clsx(
+                        "px-2.5 py-1.5 rounded-full text-xs font-medium transition-colors",
+                        replyPermission === o.value ? "bg-paper text-ink" : "text-muted"
+                      )}
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <div className="px-5 pb-5 flex items-center justify-between gap-3">

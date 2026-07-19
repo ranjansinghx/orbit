@@ -100,6 +100,33 @@ Seven additions on top of the base app, all in `supabase/migrations/0012` throug
   completely unchanged; groups are a second shape of the same `conversations`
   table, with membership tracked in a new `conversation_participants` table.
 
+## What's new (round 2): mentions/hashtags autocomplete, audience & reply controls, polls, insights, collections
+
+Three more migrations, `0018` through `0020` — run them in order after `0017_group_dms.sql`:
+
+- **@mention / #hashtag autocomplete** — no migration needed, this is composer-only:
+  typing `@` or `#` in the post composer now shows a live dropdown of matching
+  people or hashtags (`components/MentionHashtagTextarea.tsx`).
+- **Per-post audience + reply permissions** (`0018_audience_and_replies.sql`) —
+  each post can be set to Everyone / Followers / Close friends independently
+  of the account-level privacy setting, and replies can be limited to
+  Everyone / Followers / people mentioned in the post. Both are chosen at
+  posting time in the composer, and can be changed afterward from the `···`
+  menu on your own post. Close friends is a fully private list (Settings →
+  Close friends) — nobody can see who's on it.
+- **Polls** (`0019_polls.sql`) — attach a 2–4 option poll to a text post with
+  an optional voting window; results show live via realtime, revealed once
+  you vote or the poll closes.
+- **Post insights** (`components/PostInsightsModal.tsx`, no migration — it's
+  a private view over counters the app already tracked) — "View insights"
+  from the `···` menu on your own post shows engagement rate and a full
+  breakdown, visible only to you.
+- **Saved-post collections** (`0020_collections.sql`) — organize bookmarks
+  into named folders from the Saved page or the "Move to collection" option
+  in the `···` menu.
+
+## What's real now
+
 
 
 - **Auth**: real Supabase Auth. Email/password sign-up + sign-in, Google OAuth,

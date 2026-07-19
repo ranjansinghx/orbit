@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import useSWR from "swr";
 import { createClient } from "@/lib/supabase/client";
 import { Profile } from "@/lib/supabase/useAuth";
-import { PostType } from "@/lib/supabase/database.types";
+import { PostType, PostAudience, ReplyPermission } from "@/lib/supabase/database.types";
 
 export interface FeedPost {
   id: string;
@@ -25,6 +25,8 @@ export interface FeedPost {
   reposted_by?: string | null; // set on Following feed items that arrived via a repost
   quote?: string | null; // set on Following feed items that arrived via a quote-repost
   edited_at?: string | null;
+  audience?: PostAudience;
+  reply_permission?: ReplyPermission;
 }
 
 const PAGE_SIZE = 10;
@@ -343,6 +345,119 @@ export function usePendingFollowRequests(myId: string | null | undefined) {
       .filter((r) => r.profile) as PendingFollowRequest[];
   });
   return { requests: data ?? [], mutate };
+}
+
+export function useIsCloseFriend(ownerId: string | null | undefined, friendId: string | undefined) {
+  const supabase = createClient();
+  const { data, mutate } = useSWR(
+    ownerId && friendId ? ["is-close-friend", ownerId, friendId] : null,
+    async () => {
+      const { data } = await supabase
+        .from("close_friends")
+        .select("owner_id")
+        .eq("owner_id", ownerId!)
+        .eq("friend_id", friendId!)
+        .maybeSingle();
+      return !!data;
+    }
+  );
+  return { isCloseFriend: !!data, mutate };
+}
+
+export function useCloseFriends(myId: string | null | undefined) {
+  const supabase = createClient();
+  const { data, mutate } = useSWR(myId ? ["close-friends", myId] : null, async () => {
+    const { data, error } = await supabase
+      .from("close_friends")
+      .select("friend_id, profiles!close_friends_friend_id_fkey(*)")
+      .eq("owner_id", myId!);
+    if (error) throw error;
+    return (data ?? []).map((r: any) => r.profiles as Profile).filter(Boolean);
+  });
+  return { closeFriends: data ?? [], mutate };
+}
+
+export interface PollOptionResult {
+  poll_id: string;
+  closes_at: string | null;
+  option_id: string;
+  label: string;
+  vote_count: number;
+  total_votes: number;
+  my_vote: boolean;
+}
+
+export function usePollResults(postId: string | undefined) {
+  const supabase = createClient();
+  const { data, mutate } = useSWR(postId ? ["poll-results", postId] : null, async () => {
+    const { data, error } = await supabase.rpc("get_poll_results", { p_post_id: postId! });
+    if (error) throw error;
+    return data as PollOptionResult[];
+  });
+
+  useEffect(() => {
+    if (!postId) return;
+    const channel = supabase
+      .channel(`poll-${postId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "poll_options" }, () => mutate())
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [postId]);
+
+  return { results: data ?? [], mutate };
+}
+
+export interface Collection {
+  id: string;
+  user_id: string;
+  name: string;
+  created_at: string;
+  post_count: number;
+}
+
+export function useCollections(myId: string | null | undefined) {
+  const supabase = createClient();
+  const { data, mutate } = useSWR(myId ? ["collections", myId] : null, async () => {
+    const { data, error } = await supabase
+      .from("collections")
+      .select("*, saved_posts(count)")
+      .eq("user_id", myId!)
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    return (data ?? []).map((c: any) => ({ ...c, post_count: c.saved_posts?.[0]?.count ?? 0 })) as Collection[];
+  });
+  return { collections: data ?? [], mutate };
+}
+
+/** Username prefix search, for the composer's @mention autocomplete dropdown. */
+export function useMentionSuggestions(prefix: string) {
+  const supabase = createClient();
+  const clean = prefix.trim().toLowerCase();
+  const { data } = useSWR(clean ? ["mention-suggestions", clean] : null, async () => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .or(`username.ilike.${clean}%,display_name.ilike.${clean}%`)
+      .limit(6);
+    if (error) throw error;
+    return (data ?? []) as Profile[];
+  });
+  return data ?? [];
+}
+
+/** Hashtag prefix search, for the composer's #tag autocomplete dropdown. */
+export function useHashtagSuggestions(prefix: string) {
+  const supabase = createClient();
+  const clean = prefix.trim().toLowerCase();
+  const { data } = useSWR(clean ? ["hashtag-suggestions", clean] : null, async () => {
+    const { data, error } = await supabase.from("hashtags").select("tag").ilike("tag", `${clean}%`).order("tag").limit(6);
+    if (error) throw error;
+    return (data ?? []).map((r) => r.tag);
+  });
+  return data ?? [];
 }
 
 export function useUserPosts(userId: string | null | undefined) {
@@ -742,14 +857,17 @@ export function useIsSaved(myId: string | null | undefined, postId: string | und
   return { isSaved: !!data, mutate };
 }
 
-export function useSavedFeed(myId: string | null | undefined) {
+export function useSavedFeed(myId: string | null | undefined, collectionId?: string | null) {
   const supabase = createClient();
-  const { data, mutate } = useSWR(myId ? ["saved-feed", myId] : null, async () => {
-    const { data, error } = await supabase
+  const { data, mutate } = useSWR(myId ? ["saved-feed", myId, collectionId ?? "all"] : null, async () => {
+    let query = supabase
       .from("saved_posts")
-      .select("post_id, created_at, posts(*)")
+      .select("post_id, created_at, collection_id, posts(*)")
       .eq("user_id", myId!)
       .order("created_at", { ascending: false });
+    if (collectionId === null) query = query.is("collection_id", null);
+    else if (collectionId) query = query.eq("collection_id", collectionId);
+    const { data, error } = await query;
     if (error) throw error;
     const posts = (data ?? []).map((r: any) => r.posts).filter(Boolean);
     return (await hydratePosts(supabase, posts, myId ?? null)) as FeedPost[];

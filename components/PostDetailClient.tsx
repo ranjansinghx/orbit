@@ -12,6 +12,7 @@ import FollowButton from "@/components/FollowButton";
 import HashtagText from "@/components/HashtagText";
 import PostOptionsMenu from "@/components/PostOptionsMenu";
 import CommentThread from "@/components/CommentThread";
+import PollCard from "@/components/PollCard";
 import { HeartIcon, CommentIcon, ShareIcon, SendIcon, RepostIcon } from "@/components/icons";
 import { compactNumber, timeAgo } from "@/lib/format";
 
@@ -127,6 +128,7 @@ export default function PostDetailClient() {
         )}
 
         <HashtagText text={post.caption} className="text-[15px] leading-relaxed block" />
+        <PollCard postId={post.id} />
         <p className="text-xs text-muted font-mono mt-2">
           {timeAgo(post.created_at)} · {compactNumber(post.view_count)} views{post.edited_at ? " · edited" : ""}
         </p>
