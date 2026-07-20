@@ -15,6 +15,7 @@ import CommentThread from "@/components/CommentThread";
 import PollCard from "@/components/PollCard";
 import { HeartIcon, CommentIcon, ShareIcon, SendIcon, RepostIcon } from "@/components/icons";
 import { compactNumber, timeAgo } from "@/lib/format";
+import { haptic } from "@/lib/haptics";
 
 export default function PostDetailClient() {
   const params = useParams<{ id: string }>();
@@ -53,11 +54,19 @@ export default function PostDetailClient() {
     }
   }
 
-  function handleShare() {
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(`${window.location.origin}/post/${post!.id}`).catch(() => {});
+  async function handleShare() {
+    const url = `${window.location.origin}/post/${post!.id}`;
+    haptic("tap");
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ url, title: post!.caption || "A post on Orbit" });
+      } catch {
+        return;
+      }
+    } else if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(url).catch(() => {});
+      showToast("Link copied");
     }
-    showToast("Link copied");
     registerShare(post!.id).catch(() => {});
     mutatePost();
   }

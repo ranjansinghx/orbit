@@ -7,7 +7,10 @@ import { useForYouFeed } from "@/lib/supabase/hooks";
 import { toggleLike } from "@/lib/supabase/actions";
 import { useUIStore } from "@/lib/store/useUIStore";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { useSwipeNavigate } from "@/hooks/useSwipeNavigate";
 import ForYouCard from "@/components/feed/ForYouCard";
+import PendingPostCard from "@/components/feed/PendingPostCard";
+import { usePendingPostsStore } from "@/lib/store/usePendingPostsStore";
 import OrbitMark from "@/components/OrbitMark";
 import EmptyState from "@/components/EmptyState";
 import { ForYouSkeleton } from "@/components/Skeleton";
@@ -20,6 +23,10 @@ export default function HomePage() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const { pullDistance, threshold } = usePullToRefresh(containerRef, refresh);
+  const pendingPosts = usePendingPostsStore((s) => s.pendingPosts).filter((p) => p.type !== "text");
+  // Swipe left → Following (there's nothing further right than Home, so
+  // rightHref is null — a right-swipe here does nothing).
+  const swipeRef = useSwipeNavigate<HTMLDivElement>(null, "/text");
 
   // Double-tapping the Home nav icon while already on this page scrolls to
   // top and reloads page one — see BottomTabs/SidebarNav's handleHomeClick.
@@ -124,7 +131,10 @@ export default function HomePage() {
       )}
 
       <div
-        ref={containerRef}
+        ref={(el) => {
+          containerRef.current = el;
+          swipeRef.current = el;
+        }}
         onScroll={handleScroll}
         className="h-[100dvh] w-full overflow-y-scroll snap-feed no-scrollbar"
       >
@@ -134,10 +144,13 @@ export default function HomePage() {
             <ForYouSkeleton />
           </>
         )}
+        {pendingPosts.map((p) => (
+          <PendingPostCard key={p.id} post={p} variant="snap" />
+        ))}
         {posts.map((post) => (
           <ForYouCard key={post.id} post={post} onPatch={patchPost} onDeleted={() => removePost(post.id)} />
         ))}
-        {posts.length === 0 && !loading && (
+        {posts.length === 0 && !loading && pendingPosts.length === 0 && (
           <div className="h-[100dvh] flex items-center justify-center">
             <EmptyState title="No posts yet" body="Be the first — tap Post to share a video or photo." />
           </div>

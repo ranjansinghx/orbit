@@ -9,6 +9,7 @@ import Avatar from "@/components/Avatar";
 import HashtagText from "@/components/HashtagText";
 import { CloseIcon } from "@/components/icons";
 import { timeAgo } from "@/lib/format";
+import { useSwipeToDismiss } from "@/hooks/useSwipeToDismiss";
 
 export default function QuoteRepostModal() {
   const postId = useUIStore((s) => s.quoteRepostPostId);
@@ -18,6 +19,7 @@ export default function QuoteRepostModal() {
   const { post } = usePost(postId ?? undefined, userId);
   const [quote, setQuote] = useState("");
   const [posting, setPosting] = useState(false);
+  const { translateY, dragging, handlers: swipeHandlers } = useSwipeToDismiss(close);
 
   if (!postId) return null;
 
@@ -41,8 +43,12 @@ export default function QuoteRepostModal() {
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/70 animate-fade-in" onClick={close}>
       <div
         className="w-full md:w-[480px] md:rounded-2xl bg-surface border border-line rounded-t-2xl flex flex-col animate-slide-up"
+        style={{ transform: `translateY(${translateY}px)`, transition: dragging ? "none" : "transform 0.25s ease-out" }}
         onClick={(e) => e.stopPropagation()}
       >
+        <div className="md:hidden flex justify-center pt-2 pb-0.5 touch-none" {...swipeHandlers}>
+          <span className="w-9 h-1 rounded-full bg-line" />
+        </div>
         <div className="flex items-center justify-between px-5 py-4 border-b border-line">
           <h2 className="font-display italic text-xl">Quote repost</h2>
           <button onClick={close} aria-label="Close">

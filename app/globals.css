@@ -66,6 +66,23 @@ body {
   scroll-snap-stop: always;
 }
 
+/* Smooth crossfade between routes, used by the navigate() helper in
+   lib/navigate.ts. No-ops entirely on browsers without View Transitions
+   support (Safari, older Firefox) — navigation just happens instantly
+   there, same as before this was added. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.22s;
+  animation-timing-function: ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

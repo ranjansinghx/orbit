@@ -8,6 +8,7 @@ import { SIDEBAR_ITEMS } from "@/lib/nav";
 import { HomeIcon, PlusIcon, SearchIcon, MessagesIcon, HeartIcon, ProfileIcon, BookmarkIcon } from "@/components/icons";
 import OrbitMark from "@/components/OrbitMark";
 import { useUIStore } from "@/lib/store/useUIStore";
+import { useTransitionNavigate } from "@/hooks/useTransitionNavigate";
 import { useCurrentProfile } from "@/lib/supabase/useAuth";
 import { useUnreadCounts } from "@/lib/supabase/hooks";
 import Avatar from "@/components/Avatar";
@@ -48,23 +49,38 @@ export default function SidebarNav() {
   const triggerHomeRefresh = useUIStore((s) => s.triggerHomeRefresh);
   const { profile, userId } = useCurrentProfile();
   const unread = useUnreadCounts(userId ?? undefined);
+  const navigate = useTransitionNavigate();
   const lastHomeTap = useRef(0);
 
   if (pathname === "/login") return null;
 
+  function isPlainLeftClick(e: React.MouseEvent) {
+    return e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
+  }
+
   function handleHomeClick(e: React.MouseEvent) {
-    if (pathname !== "/") return;
-    const now = Date.now();
-    if (now - lastHomeTap.current < DOUBLE_TAP_MS) {
-      e.preventDefault();
-      triggerHomeRefresh();
+    if (!isPlainLeftClick(e)) return;
+    e.preventDefault();
+    if (pathname === "/") {
+      const now = Date.now();
+      if (now - lastHomeTap.current < DOUBLE_TAP_MS) {
+        triggerHomeRefresh();
+      }
+      lastHomeTap.current = now;
+      return;
     }
-    lastHomeTap.current = now;
+    navigate("/");
+  }
+
+  function handleNavClick(e: React.MouseEvent, href: string) {
+    if (!isPlainLeftClick(e)) return;
+    e.preventDefault();
+    navigate(href);
   }
 
   return (
     <nav className="hidden md:flex md:flex-col md:w-64 lg:w-72 shrink-0 h-screen sticky top-0 border-r border-line px-4 py-6">
-      <Link href="/" className="flex items-center gap-2 px-3 mb-6">
+      <Link href="/" className="flex items-center gap-2 px-3 mb-6" onClick={handleHomeClick}>
         <OrbitMark size={28} />
         <span className="font-display italic text-2xl tracking-tight">Orbit</span>
       </Link>
@@ -104,7 +120,7 @@ export default function SidebarNav() {
                   {inner}
                 </button>
               ) : (
-                <Link href={href!} className={rowClasses} onClick={item.key === "home" ? handleHomeClick : undefined}>
+                <Link href={href!} className={rowClasses} onClick={(e) => (item.key === "home" ? handleHomeClick(e) : handleNavClick(e, href!))}>
                   {inner}
                 </Link>
               )}
@@ -119,6 +135,7 @@ export default function SidebarNav() {
         </div>
         <Link
           href="/text"
+          onClick={(e) => handleNavClick(e, "/text")}
           className={clsx(
             "flex items-center px-4 py-2 rounded-full transition-colors w-fit text-[15px]",
             pathname === "/text" ? "text-paper font-semibold bg-surface" : "text-paper/70 hover:bg-surface/60"

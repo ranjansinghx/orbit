@@ -25,6 +25,7 @@ import { isPushSupported, getPushPermissionState, enablePush, disablePush } from
 import Avatar from "@/components/Avatar";
 import ToggleSwitch from "@/components/ToggleSwitch";
 import { CloseIcon, ImageIcon, LockIcon } from "@/components/icons";
+import { useSwipeToDismiss } from "@/hooks/useSwipeToDismiss";
 
 const USERNAME_PATTERN = /^[a-z0-9_.]{3,20}$/;
 
@@ -105,6 +106,8 @@ export default function SettingsModal() {
       setAvatarUrl(profile.avatar_url);
     }
   }, [profile]);
+
+  const { translateY, dragging, handlers: swipeHandlers } = useSwipeToDismiss(close);
 
   if (!open || !profile || !userId) return null;
 
@@ -261,8 +264,12 @@ export default function SettingsModal() {
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/70 animate-fade-in" onClick={close}>
       <div
         className="w-full md:w-[520px] md:rounded-2xl bg-surface border border-line rounded-t-2xl max-h-[90vh] overflow-y-auto animate-slide-up"
+        style={{ transform: `translateY(${translateY}px)`, transition: dragging ? "none" : "transform 0.25s ease-out" }}
         onClick={(e) => e.stopPropagation()}
       >
+        <div className="md:hidden flex justify-center pt-2 pb-0.5 touch-none" {...swipeHandlers}>
+          <span className="w-9 h-1 rounded-full bg-line" />
+        </div>
         <div className="flex items-center justify-between px-5 py-4 border-b border-line sticky top-0 bg-surface z-10">
           <h2 className="font-display italic text-xl">Settings</h2>
           <button onClick={close} aria-label="Close settings">

@@ -12,6 +12,7 @@ import FollowButton from "@/components/FollowButton";
 import HashtagText from "@/components/HashtagText";
 import PostOptionsMenu from "@/components/PostOptionsMenu";
 import { compactNumber } from "@/lib/format";
+import { haptic } from "@/lib/haptics";
 import { HeartIcon, CommentIcon, ShareIcon } from "@/components/icons";
 
 export default function ForYouCard({
@@ -84,6 +85,7 @@ export default function ForYouCard({
 
   async function handleLike() {
     const wasLiked = post.liked_by_me;
+    if (!wasLiked) haptic("like");
     onPatch(post.id, {
       liked_by_me: !wasLiked,
       like_count: post.like_count + (wasLiked ? -1 : 1),
@@ -103,16 +105,25 @@ export default function ForYouCard({
   function handleDoubleTap() {
     if (!post.liked_by_me) handleLike();
     else {
+      haptic("tap");
       setBurst(true);
       setTimeout(() => setBurst(false), 500);
     }
   }
 
   async function handleShare() {
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(`${window.location.origin}/post/${post.id}`).catch(() => {});
+    const url = `${window.location.origin}/post/${post.id}`;
+    haptic("tap");
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ url, title: post.caption || "A post on Orbit" });
+      } catch {
+        return;
+      }
+    } else if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(url).catch(() => {});
+      showToast("Link copied");
     }
-    showToast("Link copied");
     onPatch(post.id, { share_count: post.share_count + 1 });
     registerShare(post.id).catch(() => {});
   }

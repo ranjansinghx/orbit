@@ -9,6 +9,7 @@ import { NAV_ICONS } from "@/components/icons";
 import { useCurrentProfile } from "@/lib/supabase/useAuth";
 import { useUnreadCounts } from "@/lib/supabase/hooks";
 import { useUIStore } from "@/lib/store/useUIStore";
+import { useTransitionNavigate } from "@/hooks/useTransitionNavigate";
 import Avatar from "@/components/Avatar";
 
 const DOUBLE_TAP_MS = 350;
@@ -26,18 +27,33 @@ export default function BottomTabs() {
   const unread = useUnreadCounts(userId ?? undefined);
   const openComposer = useUIStore((s) => s.openComposer);
   const triggerHomeRefresh = useUIStore((s) => s.triggerHomeRefresh);
+  const navigate = useTransitionNavigate();
   const lastHomeTap = useRef(0);
 
   if (pathname === "/login") return null;
 
+  function isPlainLeftClick(e: React.MouseEvent) {
+    return e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
+  }
+
   function handleHomeClick(e: React.MouseEvent) {
-    if (pathname !== "/") return; // let the normal navigation happen otherwise
-    const now = Date.now();
-    if (now - lastHomeTap.current < DOUBLE_TAP_MS) {
-      e.preventDefault();
-      triggerHomeRefresh();
+    if (!isPlainLeftClick(e)) return; // let the browser handle new-tab/new-window clicks natively
+    e.preventDefault();
+    if (pathname === "/") {
+      const now = Date.now();
+      if (now - lastHomeTap.current < DOUBLE_TAP_MS) {
+        triggerHomeRefresh();
+      }
+      lastHomeTap.current = now;
+      return;
     }
-    lastHomeTap.current = now;
+    navigate("/");
+  }
+
+  function handleNavClick(e: React.MouseEvent, href: string) {
+    if (!isPlainLeftClick(e)) return;
+    e.preventDefault();
+    navigate(href);
   }
 
   return (
@@ -91,7 +107,7 @@ export default function BottomTabs() {
                   href={href!}
                   aria-label={item.label}
                   className="flex items-center justify-center py-3"
-                  onClick={item.key === "home" ? handleHomeClick : undefined}
+                  onClick={(e) => (item.key === "home" ? handleHomeClick(e) : handleNavClick(e, href!))}
                 >
                   {content}
                 </Link>

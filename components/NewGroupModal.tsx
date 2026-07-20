@@ -8,6 +8,7 @@ import { useSearch } from "@/lib/supabase/hooks";
 import { createGroupConversation } from "@/lib/supabase/actions";
 import Avatar from "@/components/Avatar";
 import { CloseIcon, UsersIcon } from "@/components/icons";
+import { useSwipeToDismiss } from "@/hooks/useSwipeToDismiss";
 
 export default function NewGroupModal() {
   const open = useUIStore((s) => s.newGroupOpen);
@@ -23,6 +24,7 @@ export default function NewGroupModal() {
 
   const { people } = useSearch(query);
   const candidates = people.filter((p) => p.id !== userId);
+  const { translateY, dragging, handlers: swipeHandlers } = useSwipeToDismiss(close);
 
   if (!open) return null;
 
@@ -61,8 +63,12 @@ export default function NewGroupModal() {
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/70 animate-fade-in" onClick={close}>
       <div
         className="w-full md:w-[480px] md:rounded-2xl bg-surface border border-line rounded-t-2xl h-[80vh] md:h-[70vh] flex flex-col animate-slide-up"
+        style={{ transform: `translateY(${translateY}px)`, transition: dragging ? "none" : "transform 0.25s ease-out" }}
         onClick={(e) => e.stopPropagation()}
       >
+        <div className="md:hidden flex justify-center pt-2 pb-0.5 touch-none shrink-0" {...swipeHandlers}>
+          <span className="w-9 h-1 rounded-full bg-line" />
+        </div>
         <div className="flex items-center justify-between px-5 py-4 border-b border-line">
           <h2 className="font-display italic text-xl flex items-center gap-2">
             <UsersIcon size={18} /> New group

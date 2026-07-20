@@ -12,6 +12,7 @@ import useSWR from "swr";
 import Avatar from "@/components/Avatar";
 import { CheckIcon, ImageIcon, SendIcon, UsersIcon } from "@/components/icons";
 import { dayLabel, clockTime } from "@/lib/format";
+import { haptic } from "@/lib/haptics";
 import clsx from "clsx";
 
 function useConversation(conversationId: string) {
@@ -137,6 +138,7 @@ export default function ChatThreadPage() {
     setDraft("");
     presenceChannelRef.current?.track({ typing: false });
     setSending(true);
+    haptic("tap");
     try {
       await sendMessage(conversationId, currentUserId, body);
       mutate();

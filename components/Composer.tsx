@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useUIStore } from "@/lib/store/useUIStore";
+import { usePendingPostsStore } from "@/lib/store/usePendingPostsStore";
 import { useCurrentProfile } from "@/lib/supabase/useAuth";
 import { useDrafts } from "@/lib/supabase/hooks";
 import { createPost, saveDraft, deleteDraft, createPoll } from "@/lib/supabase/actions";
@@ -9,6 +10,7 @@ import { uploadMedia } from "@/lib/supabase/upload";
 import { PostType, PostAudience, ReplyPermission } from "@/lib/supabase/database.types";
 import { CloseIcon, ImageIcon, VideoIcon, TextIcon, TrashIcon, GlobeIcon, UsersIcon, HeartIcon, PlusIcon, ChartIcon } from "@/components/icons";
 import MentionHashtagTextarea from "@/components/MentionHashtagTextarea";
+import { useSwipeToDismiss } from "@/hooks/useSwipeToDismiss";
 import { timeAgo } from "@/lib/format";
 import clsx from "clsx";
 
@@ -30,7 +32,12 @@ export default function Composer() {
   const open = useUIStore((s) => s.composerOpen);
   const close = useUIStore((s) => s.closeComposer);
   const showToast = useUIStore((s) => s.showToast);
-  const { userId } = useCurrentProfile();
+  const triggerHomeRefresh = useUIStore((s) => s.triggerHomeRefresh);
+  const triggerFollowingRefresh = useUIStore((s) => s.triggerFollowingRefresh);
+  const addPendingPost = usePendingPostsStore((s) => s.addPendingPost);
+  const markPendingError = usePendingPostsStore((s) => s.markPendingError);
+  const removePendingPost = usePendingPostsStore((s) => s.removePendingPost);
+  const { userId, profile: me } = useCurrentProfile();
   const { drafts, mutate: mutateDrafts } = useDrafts(userId);
 
   const [view, setView] = useState<"compose" | "drafts">("compose");
@@ -123,6 +130,27 @@ export default function Composer() {
 
   async function handlePost() {
     if (!userId) return;
+
+    // Show it in the feed immediately — closes the composer right away
+    // instead of making the person stare at a spinner while media uploads.
+    const tempId = `pending-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    if (me) {
+      addPendingPost({
+        id: tempId,
+        type,
+        caption,
+        previewUrls: needsMedia ? previewUrls : [],
+        authorAvatarUrl: me.avatar_url,
+        authorDisplayName: me.display_name,
+        authorUsername: me.username,
+        createdAt: new Date().toISOString(),
+        status: "uploading",
+      });
+    }
+    const wasTextPost = type === "text";
+    reset();
+    close();
+
     setUploading(true);
     try {
       const mediaUrls = needsMedia ? await uploadPendingFiles() : [];
@@ -136,11 +164,14 @@ export default function Composer() {
         deleteDraft(draftId).catch(() => {});
         mutateDrafts();
       }
-      showToast(type === "text" ? "Posted to Following" : "Posted to For You");
-      reset();
-      close();
+      removePendingPost(tempId);
+      previewUrls.forEach((url) => URL.revokeObjectURL(url));
+      if (wasTextPost) triggerFollowingRefresh();
+      else triggerHomeRefresh();
+      showToast(wasTextPost ? "Posted to Following" : "Posted to For You");
     } catch (err) {
       console.error(err);
+      markPendingError(tempId);
       showToast("Couldn't post — try again");
     } finally {
       setUploading(false);
@@ -187,12 +218,18 @@ export default function Composer() {
     }
   }
 
+  const { translateY, dragging, handlers: swipeHandlers } = useSwipeToDismiss(close);
+
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/70 animate-fade-in" onClick={close}>
       <div
         className="w-full md:w-[520px] md:rounded-2xl bg-surface border border-line rounded-t-2xl max-h-[92vh] overflow-y-auto animate-slide-up"
+        style={{ transform: `translateY(${translateY}px)`, transition: dragging ? "none" : "transform 0.25s ease-out" }}
         onClick={(e) => e.stopPropagation()}
       >
+        <div className="md:hidden flex justify-center pt-2 pb-0.5 touch-none" {...swipeHandlers}>
+          <span className="w-9 h-1 rounded-full bg-line" />
+        </div>
         <div className="flex items-center justify-between px-5 py-4 border-b border-line sticky top-0 bg-surface z-10">
           <h2 className="font-display italic text-xl">{view === "drafts" ? "Drafts" : "New post"}</h2>
           <div className="flex items-center gap-3">

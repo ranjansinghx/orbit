@@ -153,7 +153,38 @@ No migrations for this round — everything here is UI/client-side. New files:
   mark, headline, short body) replaces plain "nothing here" text across
   Home, Following, Saved, Notifications, Messages, and profile pages.
 
-## What's real now
+## What's new (round 4): share sheet, haptics, swipe-to-dismiss, swipe-between-feeds, optimistic posting, route transitions
+
+No migrations for this round either — everything is client-side. New files:
+`lib/haptics.ts`, `hooks/useSwipeToDismiss.ts`, `hooks/useSwipeNavigate.ts`,
+`hooks/useTransitionNavigate.ts`, `lib/store/usePendingPostsStore.ts`,
+`components/feed/PendingPostCard.tsx`.
+
+- **Native share sheet** — Share now tries `navigator.share()` first (the
+  real OS share sheet — Messages, WhatsApp, AirDrop, etc.), falling back
+  to copy-link where the Web Share API isn't available (most desktop
+  browsers).
+- **Haptic feedback** — a light `navigator.vibrate()` tick on liking,
+  double-tap-to-like, sharing, and sending a message. No-ops silently on
+  devices/browsers without vibration support.
+- **Swipe-to-dismiss on sheets** — Composer, Comments, Quote Repost, New
+  Group, and Settings all get a drag handle; pulling one down past the
+  threshold (or a fast flick) dismisses it, matching native bottom-sheet
+  behavior.
+- **Swipe between Home and Following** — a horizontal swipe moves between
+  the two feeds, in addition to the nav bar.
+- **Optimistic post creation** — hitting Post now shows the post at the
+  top of the right feed immediately, in an "uploading" state, instead of
+  only appearing after the next fetch. Swaps to the real post once the
+  server confirms it.
+- **Smooth route transitions** — primary navigation (both nav bars) uses
+  the View Transitions API for a soft crossfade where supported (Chrome,
+  Edge), and falls back to an ordinary instant navigation everywhere else
+  — including Safari, which doesn't support it. Modifier-key clicks
+  (Cmd/Ctrl-click, middle-click) are deliberately left alone so "open in
+  new tab" keeps working.
+
+
 
 
 

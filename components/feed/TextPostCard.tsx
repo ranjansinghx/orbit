@@ -9,6 +9,7 @@ import HashtagText from "@/components/HashtagText";
 import PostOptionsMenu from "@/components/PostOptionsMenu";
 import PollCard from "@/components/PollCard";
 import { compactNumber, timeAgo } from "@/lib/format";
+import { haptic } from "@/lib/haptics";
 import { HeartIcon, CommentIcon, ShareIcon, RepostIcon } from "@/components/icons";
 
 export default function TextPostCard({
@@ -34,6 +35,7 @@ export default function TextPostCard({
     e.preventDefault();
     e.stopPropagation();
     const wasLiked = post.liked_by_me;
+    if (!wasLiked) haptic("like");
     onPatch?.(post.id, { liked_by_me: !wasLiked, like_count: post.like_count + (wasLiked ? -1 : 1) });
     try {
       await toggleLike(post.id);
@@ -66,10 +68,19 @@ export default function TextPostCard({
   async function handleShare(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(`${window.location.origin}/post/${post.id}`).catch(() => {});
+    const url = `${window.location.origin}/post/${post.id}`;
+    haptic("tap");
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ url, title: post.caption || "A post on Orbit" });
+      } catch {
+        // User cancelled the share sheet — not an error, don't fall through to clipboard.
+        return;
+      }
+    } else if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(url).catch(() => {});
+      showToast("Link copied");
     }
-    showToast("Link copied");
     onPatch?.(post.id, { share_count: post.share_count + 1 });
     registerShare(post.id).catch(() => {});
   }
