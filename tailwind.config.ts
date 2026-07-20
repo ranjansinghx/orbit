@@ -31,6 +31,10 @@ const config: Config = {
           "0%": { transform: "rotate(0deg)" },
           "100%": { transform: "rotate(360deg)" },
         },
+        "orbit-drift": {
+          "0%": { transform: "rotate(0deg)" },
+          "100%": { transform: "rotate(360deg)" },
+        },
         "pop-in": {
           "0%": { transform: "scale(0.6)", opacity: "0" },
           "60%": { transform: "scale(1.15)", opacity: "1" },
@@ -47,6 +51,7 @@ const config: Config = {
       },
       animation: {
         "orbit-spin": "orbit-spin 6s linear infinite",
+        "orbit-drift": "orbit-drift 18s linear infinite",
         "pop-in": "pop-in 0.35s cubic-bezier(.2,1,.3,1)",
         "slide-up": "slide-up 0.25s ease-out",
         "fade-in": "fade-in 0.2s ease-out",
