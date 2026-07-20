@@ -1,19 +1,25 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { RefObject, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 const SWIPE_THRESHOLD = 60; // px of horizontal drag to trigger navigation
 const MAX_VERTICAL = 50; // px of vertical drift allowed before we treat it as a scroll, not a swipe
 
 /**
- * Horizontal swipe navigation between two adjacent feeds/tabs. Attach the
- * returned ref to the swipeable container. A left swipe goes to `rightHref`,
- * a right swipe goes to `leftHref` — either can be null to disable that
- * direction (e.g. there's nothing further left than Home).
+ * Horizontal swipe navigation between two adjacent feeds/tabs. Takes an
+ * existing ref to the swipeable container (same pattern as
+ * usePullToRefresh) rather than creating its own — that way callers who
+ * also need the container ref for other purposes (scroll tracking, pull-
+ * to-refresh) just pass the one ref everywhere, no manual ref-merging
+ * required. A left swipe goes to `rightHref`, a right swipe goes to
+ * `leftHref` — either can be null to disable that direction.
  */
-export function useSwipeNavigate<T extends HTMLElement>(leftHref: string | null, rightHref: string | null) {
-  const ref = useRef<T>(null);
+export function useSwipeNavigate<T extends HTMLElement>(
+  ref: RefObject<T | null>,
+  leftHref: string | null,
+  rightHref: string | null
+) {
   const router = useRouter();
   const startX = useRef(0);
   const startY = useRef(0);
@@ -45,7 +51,6 @@ export function useSwipeNavigate<T extends HTMLElement>(leftHref: string | null,
       el.removeEventListener("touchstart", onTouchStart);
       el.removeEventListener("touchend", onTouchEnd);
     };
-  }, [leftHref, rightHref, router]);
-
-  return ref;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ref.current, leftHref, rightHref, router]);
 }

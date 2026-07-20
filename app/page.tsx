@@ -26,7 +26,7 @@ export default function HomePage() {
   const pendingPosts = usePendingPostsStore((s) => s.pendingPosts).filter((p) => p.type !== "text");
   // Swipe left → Following (there's nothing further right than Home, so
   // rightHref is null — a right-swipe here does nothing).
-  const swipeRef = useSwipeNavigate<HTMLDivElement>(null, "/text");
+  useSwipeNavigate(containerRef, null, "/text");
 
   // Double-tapping the Home nav icon while already on this page scrolls to
   // top and reloads page one — see BottomTabs/SidebarNav's handleHomeClick.
@@ -131,10 +131,7 @@ export default function HomePage() {
       )}
 
       <div
-        ref={(el) => {
-          containerRef.current = el;
-          swipeRef.current = el;
-        }}
+        ref={containerRef}
         onScroll={handleScroll}
         className="h-[100dvh] w-full overflow-y-scroll snap-feed no-scrollbar"
       >
