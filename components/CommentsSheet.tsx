@@ -20,6 +20,7 @@ export default function CommentsSheet() {
   const { profile: me, userId } = useCurrentProfile();
   const { comments, mutate } = useComments(postId ?? undefined, userId);
   const { post, mutate: mutatePost } = usePost(postId ?? undefined, userId);
+  const { translateY, dragging, handlers: swipeHandlers } = useSwipeToDismiss(handleClose);
 
   if (!postId) return null;
 
@@ -46,8 +47,6 @@ export default function CommentsSheet() {
     setDraft("");
     close();
   }
-
-  const { translateY, dragging, handlers: swipeHandlers } = useSwipeToDismiss(handleClose);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/70 animate-fade-in" onClick={handleClose}>

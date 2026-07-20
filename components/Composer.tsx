@@ -65,6 +65,8 @@ export default function Composer() {
     }
   }, [open]);
 
+  const { translateY, dragging, handlers: swipeHandlers } = useSwipeToDismiss(close);
+
   if (!open) return null;
 
   const needsMedia = type !== "text";
@@ -217,8 +219,6 @@ export default function Composer() {
       console.error(err);
     }
   }
-
-  const { translateY, dragging, handlers: swipeHandlers } = useSwipeToDismiss(close);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/70 animate-fade-in" onClick={close}>
