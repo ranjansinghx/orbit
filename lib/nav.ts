@@ -15,11 +15,10 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 // Desktop sidebar — the fuller labeled list. Search and Saved live here
-// (not on mobile, where a 5-icon bar is the standard convention);
-// "Following" renders separately, under a "Feeds" section, since it's a
-// feed variant of Home rather than a peer nav destination.
+// (not on mobile, where a 5-icon bar is the standard convention).
 export const SIDEBAR_ITEMS: NavItem[] = [
   { href: "/", label: "For you", key: "home" },
+  { href: "/text", label: "Following", key: "following" },
   { href: null, label: "New post", key: "compose" },
   { href: "/search", label: "Search", key: "search" },
   { href: "/messages", label: "Messages", key: "messages" },

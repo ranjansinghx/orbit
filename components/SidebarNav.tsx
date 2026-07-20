@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { SIDEBAR_ITEMS } from "@/lib/nav";
-import { HomeIcon, PlusIcon, SearchIcon, MessagesIcon, HeartIcon, ProfileIcon, BookmarkIcon } from "@/components/icons";
+import { HomeIcon, PlusIcon, SearchIcon, MessagesIcon, HeartIcon, ProfileIcon, BookmarkIcon, TextIcon } from "@/components/icons";
 import OrbitMark from "@/components/OrbitMark";
 import { useUIStore } from "@/lib/store/useUIStore";
 import { useTransitionNavigate } from "@/hooks/useTransitionNavigate";
@@ -26,6 +26,8 @@ function RowIcon({ itemKey, active }: { itemKey: string; active: boolean }) {
   switch (itemKey) {
     case "home":
       return <HomeIcon active={active} size={23} />;
+    case "following":
+      return <TextIcon active={active} size={23} />;
     case "compose":
       return <PlusIcon size={23} className={active ? "text-paper" : "text-muted"} />;
     case "search":
@@ -128,22 +130,6 @@ export default function SidebarNav() {
           );
         })}
       </ul>
-
-      <div className="border-t border-line mt-5 pt-4">
-        <div className="flex items-center justify-between px-4 mb-1">
-          <span className="text-xs text-muted font-mono uppercase tracking-wide">Feeds</span>
-        </div>
-        <Link
-          href="/text"
-          onClick={(e) => handleNavClick(e, "/text")}
-          className={clsx(
-            "flex items-center px-4 py-2 rounded-full transition-colors w-fit text-[15px]",
-            pathname === "/text" ? "text-paper font-semibold bg-surface" : "text-paper/70 hover:bg-surface/60"
-          )}
-        >
-          Following
-        </Link>
-      </div>
 
       <div className="mt-auto pt-6 text-xs text-muted font-mono px-4">Orbit &middot; v1</div>
     </nav>
