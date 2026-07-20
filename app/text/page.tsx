@@ -20,9 +20,10 @@ export default function FollowingTextPage() {
   const { posts, loadMore, hasMore, loading, patchPost, removePost, refresh, refreshing } = useFollowingFeed(userId);
   const { counts } = useFollowCounts(userId ?? undefined);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const swipeContainerRef = useRef<HTMLDivElement>(null);
   // Swipe right → Home. There's nothing further right than Following, so
   // leftHref (a left-swipe target) is null.
-  const swipeRef = useSwipeNavigate<HTMLDivElement>("/", null);
+  useSwipeNavigate(swipeContainerRef, "/", null);
 
   const { pullDistance, threshold } = useWindowPullToRefresh(refresh);
   const pendingPosts = usePendingPostsStore((s) => s.pendingPosts).filter((p) => p.type === "text");
@@ -56,7 +57,7 @@ export default function FollowingTextPage() {
   const showSuggestions = counts.following < 8;
 
   return (
-    <div ref={swipeRef} className="max-w-2xl mx-auto border-x border-line min-h-screen relative">
+    <div ref={swipeContainerRef} className="max-w-2xl mx-auto border-x border-line min-h-screen relative">
       {(pullDistance > 0 || refreshing) && (
         <div
           className="flex justify-center transition-[height] overflow-hidden"
